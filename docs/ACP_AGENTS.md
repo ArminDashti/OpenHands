@@ -1,9 +1,9 @@
 # Using ACP agents
 
 Agent Canvas can drive your conversations with the built-in **OpenHands** agent or
-with an external **ACP agent** — Claude Code, Codex, or Gemini CLI. This guide
-explains what ACP agents are, how to onboard one, and how to switch agents or
-models later.
+with an external **ACP agent** — Claude Code, Codex, Gemini CLI, or OpenCode. This
+guide explains what ACP agents are, how to onboard one, and how to switch agents
+or models later.
 
 ## What is an ACP agent?
 
@@ -43,8 +43,24 @@ changing a provider happens upstream in the SDK, not here.
 | **Claude Code** | `npx -y @agentclientprotocol/claude-agent-acp` |
 | **Codex** | `npx -y @agentclientprotocol/codex-acp` |
 | **Gemini CLI** | `npx -y @google/gemini-cli --acp` |
+| **OpenCode** | `npx -y opencode-ai acp` |
 
 See [Authentication](#authentication) for how each one authenticates.
+
+### OpenCode and OpenCode Go
+
+Pick **OpenCode** to run the `opencode` CLI as the agent. It authenticates with
+`OPENCODE_API_KEY` — the key from your **OpenCode Zen** account, which is also the
+key that carries an **OpenCode Go** subscription ($10/month for the curated
+open-model set) — set it under Settings → Secrets or during onboarding, or skip
+it entirely if the CLI is already signed in on the backend.
+
+Model selection works the same way as for any other harness: pick one of the
+registry's OpenCode models, or choose the picker's custom-model entry and type
+the model id the CLI expects. OpenCode Go models are namespaced
+`opencode-go/<model-id>` (for example `opencode-go/kimi-k3`), while the Zen
+models the picker lists are `opencode/<model-id>`. Custom-model entry exists
+because model catalogues stay SDK-owned — see the `ACP_PROVIDERS` tests.
 
 ## Authentication
 
@@ -69,6 +85,7 @@ needed instead.
 | **Claude Code** | A Claude Code login (Pro/Max), from Claude Code's own credential store: the **macOS Keychain**, or `~/.claude/.credentials.json` on Linux | `ANTHROPIC_API_KEY` *(onboarding)* |
 | **Codex** | A ChatGPT login (`codex login`) cached at `~/.codex/auth.json` | `OPENAI_API_KEY` *(onboarding)* |
 | **Gemini CLI** | Your Google login (`gemini`/`gemini --acp`) cached at `~/.gemini/oauth_creds.json` | `GEMINI_API_KEY` *(onboarding)* |
+| **OpenCode** | An OpenCode login (`opencode auth login`), stored in the CLI's own auth store (exported over ACP as `OPENCODE_AUTH_CONTENT`) | `OPENCODE_API_KEY` *(onboarding — your OpenCode Zen key, which also carries OpenCode Go)* |
 
 All three collect an *optional* API key (+ base URL) in onboarding. As noted
 above, **a subscription / OAuth login takes priority over an API key** — when the

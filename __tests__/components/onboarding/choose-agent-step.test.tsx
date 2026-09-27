@@ -40,20 +40,23 @@ describe("ChooseAgentStep", () => {
     vi.spyOn(SettingsService, "saveSettings").mockResolvedValue(true);
   });
 
-  it("renders all four agent options with OpenHands marked selected by default", () => {
+  it("renders all five agent options with OpenHands marked selected by default", () => {
     renderStep();
 
     const openhands = screen.getByTestId("onboarding-agent-option-openhands");
     const claude = screen.getByTestId("onboarding-agent-option-claude-code");
     const codex = screen.getByTestId("onboarding-agent-option-codex");
     const gemini = screen.getByTestId("onboarding-agent-option-gemini-cli");
+    const opencode = screen.getByTestId("onboarding-agent-option-opencode");
 
     expect(openhands).toHaveAttribute("aria-checked", "true");
-    // All four options are clickable — ACP is no longer "coming soon".
+    // Every option is clickable — ACP is no longer "coming soon".
     expect(openhands).not.toBeDisabled();
     expect(claude).not.toBeDisabled();
     expect(codex).not.toBeDisabled();
     expect(gemini).not.toBeDisabled();
+    expect(opencode).not.toBeDisabled();
+    expect(within(opencode).getByText("OpenCode")).toBeInTheDocument();
 
     // Neither the legacy "coming soon" banner nor the per-option badges
     // should render now that all four agent kinds work end-to-end.

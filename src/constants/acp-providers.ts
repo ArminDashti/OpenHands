@@ -142,6 +142,18 @@ const ACP_PROVIDER_UI: Record<
     icon: "gemini",
     description_key: I18nKey.ONBOARDING$AGENT_GEMINI_CLI_DESCRIPTION,
   },
+  // OpenCode (``opencode acp``) — the harness that carries the OpenCode Zen
+  // and OpenCode Go model subscriptions. Its credential is the registry's
+  // ``OPENCODE_API_KEY`` (see ``getAcpProviderSecrets``), i.e. the Zen account
+  // key a Go subscriber copies after subscribing; Go-only model ids
+  // (``opencode-go/…``) ride the picker's custom-model entry, since model
+  // catalogues stay SDK-owned (see ``__tests__/constants/acp-providers``).
+  // No brand mark ships here, so the tile and chip render the neutral
+  // terminal glyph rather than claiming an identity we can't draw.
+  opencode: {
+    icon: "cli-generic",
+    description_key: I18nKey.ONBOARDING$AGENT_OPENCODE_DESCRIPTION,
+  },
 };
 
 function getAvailableModels(key: string): ACPModelOption[] | undefined {

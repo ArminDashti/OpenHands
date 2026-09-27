@@ -31298,6 +31298,24 @@
     "tr": "Google'ın Gemini CLI aracısı.",
     "uk": "Агент Gemini CLI від Google."
   },
+  "ONBOARDING$AGENT_OPENCODE_DESCRIPTION": {
+    "en": "OpenCode's open-source coding agent. Works with OpenCode Zen and OpenCode Go.",
+    "ja": "OpenCodeのオープンソースコーディングエージェント。OpenCode ZenとOpenCode Goに対応。",
+    "zh-CN": "OpenCode 的开源编码代理。支持 OpenCode Zen 和 OpenCode Go。",
+    "zh-TW": "OpenCode 的開源編碼代理。支援 OpenCode Zen 和 OpenCode Go。",
+    "ko-KR": "OpenCode의 오픈 소스 코딩 에이전트입니다. OpenCode Zen 및 OpenCode Go를 지원합니다.",
+    "no": "OpenCodes åpen kildekode-kodeagent. Støtter OpenCode Zen og OpenCode Go.",
+    "ar": "وكيل البرمجة مفتوح المصدر من OpenCode. يدعم OpenCode Zen وOpenCode Go.",
+    "de": "OpenCodes quelloffener Coding-Agent. Funktioniert mit OpenCode Zen und OpenCode Go.",
+    "fr": "L'agent de codage open source d'OpenCode. Compatible avec OpenCode Zen et OpenCode Go.",
+    "it": "L'agente di coding open source di OpenCode. Compatibile con OpenCode Zen e OpenCode Go.",
+    "pt": "O agente de programação de código aberto do OpenCode. Funciona com OpenCode Zen e OpenCode Go.",
+    "es": "El agente de programación de código abierto de OpenCode. Compatible con OpenCode Zen y OpenCode Go.",
+    "ca": "L'agent de programació de codi obert d'OpenCode. Compatible amb OpenCode Zen i OpenCode Go.",
+    "tr": "OpenCode'un açık kaynak kodlama aracısı. OpenCode Zen ve OpenCode Go ile çalışır.",
+    "uk": "Агент програмування з відкритим кодом від OpenCode. Працює з OpenCode Zen і OpenCode Go."
+  },
+
   "ONBOARDING$BACKEND_TITLE": {
     "en": "Check your backend",
     "ja": "バックエンドを確認",

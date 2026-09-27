@@ -152,6 +152,18 @@ describe("getAcpProviderSecrets — containerized credentials", () => {
     ]);
   });
 
+  it("collects the Zen / OpenCode Go API key for OpenCode", () => {
+    // OpenCode's only credential is the registry's api_key_env_var: the Zen
+    // account key, which is also what a Go subscriber pastes. No base URL —
+    // the CLI takes an endpoint override from its own config file, not the
+    // environment (software-agent-sdk acp_providers).
+    const names = getAcpProviderSecrets("opencode").map((f) => f.name);
+    expect(names).toEqual(["OPENCODE_API_KEY"]);
+    expect(getAcpProviderSecrets("opencode")[0]).toMatchObject({
+      secret: true,
+    });
+  });
+
   it("renders file-content blobs as multiline secret fields", () => {
     // ``multiline`` also drives the orphaned-credential warning on backends
     // that can't materialise file secrets (cloud, agent-canvas#1016).
