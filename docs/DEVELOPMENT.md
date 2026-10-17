@@ -45,7 +45,14 @@ domain sockets (some devcontainers, NFS/CIFS homes), set the standard
 `TMUX_TMPDIR` env var to a local path such as `/tmp` and the dev stack will use
 it instead.
 
-### Environment Variables
+### Ports
+
+`--port` / `PORT` controls **only** the ingress port (the origin you open in
+the browser). The frontend/Vite port (default `3001`) is internal: if the
+default is already taken — for example by an unrelated app on the machine —
+the launcher automatically picks a free port and serves the frontend there
+instead of aborting. Set it explicitly with `--frontend-port <port>` or
+`OH_CANVAS_SAFE_VITE_PORT=<port>` when you want a fixed value.
 
 | Variable                  | Description                    | Default |
 | ------------------------- | ------------------------------ | ------- |

@@ -178,6 +178,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const config = {
     port: null,
+    frontendPort: null,
     automationGitRef: null,
     automationRepo: null,
     verbose: false,
@@ -197,6 +198,9 @@ function parseArgs() {
       case "-p":
       case "--port":
         config.port = parseInt(args[++i], 10);
+        break;
+      case "--frontend-port":
+        config.frontendPort = parseInt(args[++i], 10);
         break;
       case "--automation-ref":
         config.automationGitRef = args[++i];
