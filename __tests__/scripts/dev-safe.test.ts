@@ -830,6 +830,29 @@ describe("buildSafeDevConfig", () => {
     // The file is left untouched.
     expect(readFileSync(keyPath, "utf8").trim()).toBe("persisted-key-value");
   });
+
+  it("defaults bash-events retention to the shared config value", () => {
+    const config = buildSafeDevConfig("/workspace/project/agent-canvas", {
+      OH_SESSION_API_KEY_PATH: tempKeyPath(),
+    });
+
+    expect(config.bashEventsRetentionSeconds).toBe("172800");
+    expect(buildAgentServerEnv(config).OH_BASH_EVENTS_RETENTION_SECONDS).toBe(
+      "172800",
+    );
+  });
+
+  it("honors OH_BASH_EVENTS_RETENTION_SECONDS overrides", () => {
+    const config = buildSafeDevConfig("/workspace/project/agent-canvas", {
+      OH_BASH_EVENTS_RETENTION_SECONDS: "3600",
+      OH_SESSION_API_KEY_PATH: tempKeyPath(),
+    });
+
+    expect(config.bashEventsRetentionSeconds).toBe("3600");
+    expect(buildAgentServerEnv(config).OH_BASH_EVENTS_RETENTION_SECONDS).toBe(
+      "3600",
+    );
+  });
 });
 
 describe("getOrCreatePersistedSessionApiKey", () => {

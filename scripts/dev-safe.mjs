@@ -613,6 +613,7 @@ export async function buildSafeDevConfigAsync(
  * @property {string} conversationsPath
  * @property {string} workspacesPath
  * @property {string} bashEventsDir
+ * @property {string} bashEventsRetentionSeconds
  * @property {string} backendBaseUrl
  * @property {string} backendHost
  * @property {string} workingDir
@@ -688,6 +689,9 @@ function buildConfigFromPorts(ports, cwd, env) {
     conversationsPath,
     workspacesPath,
     bashEventsDir: path.join(stateDir, "bash_events"),
+    bashEventsRetentionSeconds:
+      env.OH_BASH_EVENTS_RETENTION_SECONDS ||
+      String(DEFAULT_BASH_EVENTS_RETENTION_SECONDS),
     backendBaseUrl: `http://127.0.0.1:${backendPort}`,
     backendHost: `127.0.0.1:${backendPort}`,
     workingDir: env.VITE_WORKING_DIR || workspacesPath,
