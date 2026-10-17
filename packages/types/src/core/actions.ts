@@ -27,6 +27,7 @@ export interface CommandAction extends OpenHandsActionEvent<"run"> {
     confirmation_state: "confirmed" | "rejected" | "awaiting_confirmation";
     thought: Thought;
     hidden?: boolean;
+    reasoning_content?: string | null;
   };
 }
 
@@ -37,6 +38,7 @@ export interface AssistantMessageAction
     thought: Thought;
     image_urls: string[] | null;
     wait_for_response: boolean;
+    reasoning_content?: string | null;
   };
 }
 
@@ -105,6 +107,7 @@ export interface FileReadAction extends OpenHandsActionEvent<"read"> {
     safety_risk: ActionSafetyRisk | null;
     impl_source?: string;
     view_range?: number[] | null;
+    reasoning_content?: string | null;
   };
 }
 
@@ -133,6 +136,7 @@ export interface FileEditAction extends OpenHandsActionEvent<"edit"> {
     thought: string;
     safety_risk: ActionSafetyRisk | null;
     impl_source?: string;
+    reasoning_content?: string | null;
   };
 }
 
