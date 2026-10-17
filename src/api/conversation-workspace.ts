@@ -1,8 +1,9 @@
+import i18n from "#/i18n";
+import { I18nKey } from "#/i18n/declaration";
 import { ServerClient } from "@openhands/typescript-client/clients";
 import type { ServerInfo } from "@openhands/typescript-client";
 import {
   getAgentServerClientOptions,
-  assertConversationRuntimeClientSupport,
   type AgentServerClientOverrides,
 } from "./agent-server-client-options";
 import { getCachedAgentServerInfo } from "./agent-server-compatibility";
@@ -14,16 +15,10 @@ import { resolveAbsoluteAgentServerPath } from "./agent-server-home";
 
 const ISOLATED_WORKSPACE_DIR = "/workspace";
 
-export const ISOLATED_WORKSPACE_MESSAGE =
-  "This backend runs conversations in isolated Docker workspaces at /workspace. Host folders and projects cannot be attached. Clear the host project selection to start in a new isolated workspace.";
-
 export function usesIsolatedWorkspace(
   info: ServerInfo | null | undefined,
 ): boolean {
-  return (
-    info?.conversation_runtime === "docker" ||
-    info?.workspace_mode === "isolated"
-  );
+  return info?.conversation_runtime === "docker";
 }
 
 export async function getConversationServerInfo(
@@ -53,9 +48,8 @@ export async function resolveNewConversationWorkspace(options: {
           options.workingDir === ISOLATED_WORKSPACE_DIR
         ))
     ) {
-      throw new Error(ISOLATED_WORKSPACE_MESSAGE);
+      throw new Error(i18n.t(I18nKey.HOME$ISOLATED_WORKSPACE_NOTICE));
     }
-    assertConversationRuntimeClientSupport();
     return {
       workingDir: ISOLATED_WORKSPACE_DIR,
       hooksProjectDir: null,

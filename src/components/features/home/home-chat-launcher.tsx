@@ -74,12 +74,8 @@ export function HomeChatLauncher() {
     useConversationStore();
   const { handleUpload } = useChatAttachmentUpload();
   const { error: workspacesError } = useLocalWorkspaces({ enabled: isLocal });
-  const {
-    isolated,
-    clientUnsupported,
-    clientUnsupportedMessage,
-    unsupportedMessage: runtimeWorkspaceMessage,
-  } = useConversationWorkspace();
+  const { isolated, unsupportedMessage: runtimeWorkspaceMessage } =
+    useConversationWorkspace();
   const workspacesUnsupportedMessage =
     runtimeWorkspaceMessage ??
     (isLocal ? getWorkspacesUnsupportedMessage(workspacesError, t) : null);
@@ -255,10 +251,9 @@ export function HomeChatLauncher() {
 
         {isolated && (
           <p role="status" className="text-xs text-[var(--oh-text-secondary)]">
-            {clientUnsupportedMessage ??
-              (pendingWorkspace
-                ? runtimeWorkspaceMessage
-                : t(I18nKey.HOME$ISOLATED_WORKSPACE_NEW))}
+            {pendingWorkspace
+              ? runtimeWorkspaceMessage
+              : t(I18nKey.HOME$ISOLATED_WORKSPACE_NEW)}
             {pendingWorkspace && (
               <button
                 type="button"
