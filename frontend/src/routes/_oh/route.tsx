@@ -51,6 +51,7 @@ export default function MainApp() {
 
   const [consentFormIsOpen, setConsentFormIsOpen] = React.useState(false);
 
+  const { data: settings } = useSettings();
   const config = useConfig();
   const {
     data: isAuthed,

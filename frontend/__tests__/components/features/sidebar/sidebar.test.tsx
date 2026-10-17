@@ -6,7 +6,7 @@ import { createRoutesStub } from "react-router";
 import { Sidebar } from "#/components/features/sidebar/sidebar";
 import { MULTI_CONVO_UI_IS_ENABLED } from "#/utils/constants";
 
-const renderSidebar = () => {
+describe("Sidebar", () => {
   const RouterStub = createRoutesStub([
     {
       path: "/conversation/:conversationId",
@@ -14,8 +14,8 @@ const renderSidebar = () => {
     },
   ]);
 
-  renderWithProviders(<RouterStub initialEntries={["/conversation/123"]} />);
-};
+  const renderSidebar = () =>
+    renderWithProviders(<RouterStub initialEntries={["/conversation/123"]} />);
 
 describe("Sidebar", () => {
   it.skipIf(!MULTI_CONVO_UI_IS_ENABLED)(
