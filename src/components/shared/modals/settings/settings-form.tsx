@@ -7,7 +7,6 @@ import { DangerModal } from "../confirmation-modals/danger-modal";
 import { extractSettings } from "#/utils/settings-utils";
 import { ModalBackdrop } from "../modal-backdrop";
 import { ModelSelector } from "./model-selector";
-import { Settings } from "#/types/settings";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsInput } from "#/components/features/settings/settings-input";
 import { HelpLink } from "#/ui/help-link";
@@ -33,8 +32,7 @@ export function SettingsForm({ settings, onClose }: SettingsFormProps) {
 
   const handleFormSubmission = async (formData: FormData) => {
     const newSettings = extractSettings(formData);
-
-    await saveUserSettings(newSettings, {
+    saveUserSettings(newSettings, {
       onSuccess: () => {
         onClose();
 
