@@ -4,7 +4,6 @@ import { convertImageToBase64 } from "#/utils/convert-image-to-base-64";
 import { FeedbackActions } from "../feedback/feedback-actions";
 import { createChatMessage } from "#/services/chat-service";
 import { InteractiveChatBox } from "./interactive-chat-box";
-import { addUserMessage } from "#/state/chat-slice";
 import { RootState } from "#/store";
 import AgentState from "#/types/agent-state";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
