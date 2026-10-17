@@ -3,7 +3,9 @@ import { ComboBox, Header, Input, ListBox } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsInput } from "#/components/features/settings/settings-input";
+import { SettingsDropdownInput } from "#/components/features/settings/settings-dropdown-input";
 import { KeyStatusIcon } from "#/components/features/settings/key-status-icon";
+import { useSearchProviders } from "#/hooks/query/use-search-providers";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
 import { ApiKeyModalBase } from "#/components/features/settings/api-key-modal-base";
 import type { ProviderConnection } from "#/api/provider-connections-service/provider-connections-service.api";
@@ -55,6 +57,16 @@ export function ProviderConnectionModal({
   const [provider, setProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+
+  // Provider options come from the same litellm source as the model selector.
+  // `custom` is always offered so a provider missing from the catalog can still
+  // be used; `allowsCustomValue` also lets the user type a free-form value.
+  const providerItems = useMemo(() => {
+    const names = new Set<string>([DEFAULT_PROVIDER]);
+    for (const p of providers) names.add(p.name);
+    if (provider) names.add(provider);
+    return Array.from(names).map((name) => ({ key: name, label: name }));
+  }, [providers, provider]);
 
   const isOpen = isCreate || Boolean(connection);
   const keyAlreadySet = Boolean(connection?.api_key_set);

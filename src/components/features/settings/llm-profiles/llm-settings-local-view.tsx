@@ -16,7 +16,9 @@ import {
 import { useActiveBackend } from "#/contexts/active-backend-context";
 import { useSaveLlmProfile } from "#/hooks/mutation/use-save-llm-profile";
 import { useActivateLlmProfile } from "#/hooks/mutation/use-activate-llm-profile";
+import { useCreateProviderConnection } from "#/hooks/mutation/use-create-provider-connection";
 import { useLlmProfiles } from "#/hooks/query/use-llm-profiles";
+import { useProviderConnections } from "#/hooks/query/use-provider-connections";
 import { useSettings } from "#/hooks/query/use-settings";
 import { useAgentSettingsSchema } from "#/hooks/query/use-agent-settings-schema";
 import {
@@ -52,6 +54,12 @@ import {
   normalizeFieldValue,
   SettingsFormValues,
 } from "#/utils/sdk-settings-schema";
+import {
+  NO_PROVIDER_CONNECTION,
+  resolveProviderConnectionSelection,
+  type ProviderConnectionSelection,
+} from "#/utils/resolve-provider-connection";
+import { getApiErrorMessage } from "#/utils/api-error-message";
 import { BackNavButton } from "#/components/shared/buttons/back-nav-button";
 import { Typography } from "#/ui/typography";
 import { useSettingsSectionHeader } from "#/contexts/settings-section-header-context";
@@ -99,7 +107,9 @@ export function LlmSettingsLocalView() {
   const { setHideSectionHeader } = useSettingsSectionHeader();
   const saveProfile = useSaveLlmProfile();
   const activateProfile = useActivateLlmProfile();
+  const createConnection = useCreateProviderConnection();
   const { data: profilesData } = useLlmProfiles();
+  const { data: providerConnections } = useProviderConnections();
   const { data: settings } = useSettings();
   const { data: agentSchema } = useAgentSettingsSchema(
     settings?.agent_settings_schema,
@@ -224,11 +234,16 @@ export function LlmSettingsLocalView() {
         }
 
         // Seed the provider-connection link explicitly (it is excluded from the
-        // schema-driven inputs), so an unchanged profile keeps its connection.
+        // schema-driven inputs). A linked profile keeps its connection id; a
+        // legacy inline profile is seeded to the explicit "none" sentinel rather
+        // than an empty value so editing it does not trigger the create/reuse
+        // default (that default is reserved for brand-new profiles, which start
+        // empty). The user can still opt into a connection from the selector.
         initialValues[LLM_PROVIDER_CONNECTION_KEY] =
-          typeof config.provider_connection_id === "string"
+          typeof config.provider_connection_id === "string" &&
+          config.provider_connection_id
             ? config.provider_connection_id
-            : "";
+            : NO_PROVIDER_CONNECTION;
 
         setEditingProfile({ profile, initialValues, baseConfig: config });
         setProfileName(profile.name);
@@ -317,10 +332,24 @@ export function LlmSettingsLocalView() {
       llmConfig.provider_connection_id = null;
       delete llmConfig.api_key;
       delete llmConfig.base_url;
-    } else if (connectionId) {
+    } else if (connectionMode === "link" && selection.connectionId) {
       llmConfig.auth_type = LLM_AUTH_TYPE_API_KEY;
       llmConfig.subscription_vendor = null;
-      llmConfig.provider_connection_id = connectionId;
+      llmConfig.provider_connection_id = selection.connectionId;
+      delete llmConfig.api_key;
+      delete llmConfig.base_url;
+    } else if (connectionMode === "create") {
+      llmConfig.auth_type = LLM_AUTH_TYPE_API_KEY;
+      llmConfig.subscription_vendor = null;
+      const baseUrl =
+        typeof llmConfig.base_url === "string" ? llmConfig.base_url.trim() : "";
+      pendingConnection = {
+        provider: selection.provider,
+        apiKey: typedKey,
+        baseUrl: baseUrl || null,
+      };
+      // The connection becomes the source of truth; the profile keeps no inline
+      // copy. provider_connection_id is set after creation succeeds.
       delete llmConfig.api_key;
       delete llmConfig.base_url;
     } else {
@@ -368,11 +397,15 @@ export function LlmSettingsLocalView() {
       }
     }
 
-    const model = typeof llmConfig.model === "string" ? llmConfig.model : "";
     if (!model) {
       displayErrorToast(t(I18nKey.SETTINGS$MODEL_REQUIRED));
       return;
     }
+
+    // Once creation succeeds (below) the credential lives on the connection, so
+    // the profile is treated as linked for preflight / save purposes.
+    const linksConnection =
+      connectionMode === "link" || connectionMode === "create";
 
     const trimmedName = profileName.trim();
     const originalName = editingProfile?.profile.name;
@@ -391,7 +424,7 @@ export function LlmSettingsLocalView() {
       // misconfigured profile before saving it. Skip it for connection-linked
       // profiles: their credential lives on the provider connection, not
       // inline, so there is nothing on this profile to pre-flight here.
-      if (!connectionId) {
+      if (!linksConnection) {
         const preflight = await ProfilesService.validateProfile(trimmedName, {
           llm: llmConfig as SaveProfileRequest["llm"],
           include_secrets: true,
@@ -404,6 +437,26 @@ export function LlmSettingsLocalView() {
       }
 
       setIsValidating(false);
+
+      // Auto-create the shared provider connection (named after the provider)
+      // before saving, then link the profile to it. Surfaces the server message
+      // (e.g. a validation error) and aborts the save on failure.
+      if (pendingConnection) {
+        try {
+          const created = await createConnection.mutateAsync({
+            display_name: pendingConnection.provider,
+            provider: pendingConnection.provider,
+            api_key: pendingConnection.apiKey,
+            base_url: pendingConnection.baseUrl,
+          });
+          llmConfig.provider_connection_id = created.id;
+        } catch (error) {
+          displayErrorToast(
+            getApiErrorMessage(error, t(I18nKey.ERROR$GENERIC)),
+          );
+          return;
+        }
+      }
 
       // If editing and name changed, rename the profile first
       if (isRename) {
@@ -447,8 +500,10 @@ export function LlmSettingsLocalView() {
     editingProfile,
     backend.kind,
     profilesData?.active_profile,
+    providerConnections,
     saveProfile,
     activateProfile,
+    createConnection,
     t,
     handleBackToList,
   ]);
