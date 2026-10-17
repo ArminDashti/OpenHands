@@ -7,7 +7,7 @@ from server.constants import DEFAULT_BILLING_MARGIN
 from sqlalchemy import JSON, UUID, Boolean, Column, Float, Integer, String
 from sqlalchemy.orm import relationship
 from storage.base import Base
-from storage.encrypt_utils import decrypt_value, encrypt_value
+from storage.encrypt_utils import EncryptedJSON, decrypt_value, encrypt_value
 
 
 class Org(Base):  # type: ignore
