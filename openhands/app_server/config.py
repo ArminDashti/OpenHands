@@ -122,6 +122,9 @@ def config_from_env() -> AppServerConfig:
     from openhands.app_server.app_conversation.sql_app_conversation_start_task_service import (  # noqa: E501
         SQLAppConversationStartTaskServiceInjector,
     )
+    from openhands.app_server.event.aws_event_service import (
+        AwsEventServiceInjector,
+    )
     from openhands.app_server.event.filesystem_event_service import (
         FilesystemEventServiceInjector,
     )

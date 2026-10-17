@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 import os
 from dataclasses import dataclass
@@ -68,6 +69,11 @@ STATUS_MAPPING = {
 }
 
 
+def _hash_session_api_key(session_api_key: str) -> str:
+    """Hash a session API key using SHA-256."""
+    return hashlib.sha256(session_api_key.encode()).hexdigest()
+
+
 class StoredRemoteSandbox(Base):  # type: ignore
     """Local storage for remote sandbox info.
 
@@ -80,6 +86,7 @@ class StoredRemoteSandbox(Base):  # type: ignore
     id = Column(String, primary_key=True)
     created_by_user_id = Column(String, nullable=True, index=True)
     sandbox_spec_id = Column(String, index=True)  # shadows runtime['image']
+    session_api_key_hash = Column(String, nullable=True, index=True)
     created_at = Column(UtcDateTime, server_default=func.now(), index=True)
 
 
@@ -320,6 +327,13 @@ class RemoteSandboxService(SandboxService):
             )
             response.raise_for_status()
             runtime_data = response.json()
+
+            # Store the session_api_key hash for efficient lookups
+            session_api_key = runtime_data.get('session_api_key')
+            if session_api_key:
+                stored_sandbox.session_api_key_hash = _hash_session_api_key(
+                    session_api_key
+                )
 
             # Hack - result doesn't contain this
             runtime_data['pod_status'] = 'pending'
