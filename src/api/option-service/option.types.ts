@@ -40,6 +40,12 @@ export interface ACPProviderConfig {
   default_command: string[];
 }
 
+export interface ACPProviderConfig {
+  key: string;
+  display_name: string;
+  default_command: string[];
+}
+
 export interface WebClientConfig {
   feature_flags: WebClientFeatureFlags;
   providers_configured: Provider[];
