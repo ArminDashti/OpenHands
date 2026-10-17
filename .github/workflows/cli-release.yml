@@ -1,0 +1,122 @@
+# Workflow that builds CLI binaries for release
+name: CLI - Release Binaries
+
+# Run on release tags
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build release for'
+        required: true
+        type: string
+
+# Cancel previous runs if a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release-binaries:
+    name: Build release binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            executable: openhands
+            asset_name: openhands-linux-x64
+          - os: macos-latest
+            platform: macos
+            executable: openhands
+            asset_name: openhands-macos-x64
+          - os: windows-latest
+            platform: windows
+            executable: openhands.exe
+            asset_name: openhands-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        working-directory: openhands-cli
+        run: |
+          uv sync
+
+      - name: Build binary executable (Linux/macOS)
+        if: matrix.platform != 'windows'
+        working-directory: openhands-cli
+        run: |
+          ./build.sh --install-pyinstaller | tee output.log
+          echo "Full output:"
+          cat output.log
+
+          if grep -q "❌" output.log; then
+            echo "❌ Found failure marker in output"
+            exit 1
+          fi
+
+          echo "✅ Build & test finished without ❌ markers"
+
+      - name: Build binary executable (Windows)
+        if: matrix.platform == 'windows'
+        working-directory: openhands-cli
+        shell: bash
+        run: |
+          # Use bash script on Windows with Git Bash
+          ./build.sh --install-pyinstaller | tee output.log
+          echo "Full output:"
+          cat output.log
+
+          if grep -q "❌" output.log; then
+            echo "❌ Found failure marker in output"
+            exit 1
+          fi
+
+          echo "✅ Build & test finished without ❌ markers"
+
+      - name: Rename binary for release
+        working-directory: openhands-cli/dist
+        run: |
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            mv openhands.exe ${{ matrix.asset_name }}
+          else
+            mv openhands ${{ matrix.asset_name }}
+          fi
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: openhands-cli/dist/${{ matrix.asset_name }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload binary artifact (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: openhands-cli/dist/${{ matrix.asset_name }}
+          retention-days: 30
