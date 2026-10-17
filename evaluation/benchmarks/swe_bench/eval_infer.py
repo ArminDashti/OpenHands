@@ -4,6 +4,7 @@ import tempfile
 import time
 
 import pandas as pd
+from pydantic import BaseModel
 from swebench.harness.grading import get_eval_report
 from swebench.harness.run_evaluation import (
     APPLY_PATCH_FAIL,
@@ -121,7 +122,6 @@ async def process_instance(
         'resolved': False,
         'failed_apply_patch': False,
         'error_eval': False,
-        'test_timeout': False,
     }
 
     if model_patch == '':
@@ -198,14 +198,13 @@ async def process_instance(
 
                 # Poll for completion
                 start_time = time.time()
-                timeout = 1800  # 30 minutes
+                timeout = 900  # 15 minutes
                 while True:
                     seconds_elapsed = time.time() - start_time
                     if seconds_elapsed > timeout:
                         logger.info(
                             f'[{instance_id}] Evaluation timed out after {timeout} seconds'
                         )
-                        instance['test_result']['report']['test_timeout'] = True
                         break
                     check_action = CmdRunAction(
                         command=f'ps -p {pid} > /dev/null; echo $?', keep_prompt=False
@@ -346,9 +345,6 @@ if __name__ == '__main__':
     assert {'instance_id', 'model_patch'}.issubset(
         set(predictions.columns)
     ), 'Input file must contain instance_id and model_patch columns.'
-
-    # Process model_patch
-    predictions['model_patch'] = predictions['model_patch'].apply(process_git_patch)
 
     # Merge predictions with dataset
     predictions['instance'] = predictions['instance_id'].apply(
