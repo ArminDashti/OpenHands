@@ -2,10 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
-import { redirect } from "react-router";
 import { InviteOrganizationMemberModal } from "#/components/features/org/invite-organization-member-modal";
+import { ConfirmRoleChangeModal } from "#/components/features/org/confirm-role-change-modal";
 import { useOrganizationMembers } from "#/hooks/query/use-organization-members";
-import { OrganizationUserRole } from "#/types/org";
+import { OrganizationMember, OrganizationUserRole } from "#/types/org";
 import { OrganizationMemberListItem } from "#/components/features/org/organization-member-list-item";
 import { useUpdateMemberRole } from "#/hooks/mutation/use-update-member-role";
 import { useRemoveMember } from "#/hooks/mutation/use-remove-member";
@@ -17,6 +17,9 @@ import {
   fetchAndCacheMe,
 } from "#/utils/query-client-getters";
 import { I18nKey } from "#/i18n/declaration";
+import { usePermission } from "#/hooks/organizations/use-permissions";
+import { getAvailableRolesAUserCanAssign } from "#/utils/org/permission-checks";
+import { createPermissionGuard } from "#/utils/org/permission-guard";
 
 export const clientLoader = async () => {
   const selectedOrgId = getSelectedOrgFromQueryClient();
@@ -34,60 +37,61 @@ function ManageOrganizationMembers() {
   const { t } = useTranslation();
   const { data: organizationMembers } = useOrganizationMembers();
   const { data: user } = useMe();
-  const { mutate: updateMemberRole } = useUpdateMemberRole();
+  const { mutate: updateMemberRole, isPending } = useUpdateMemberRole();
   const { mutate: removeMember } = useRemoveMember();
-
   const [inviteModalOpen, setInviteModalOpen] = React.useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = React.useState<{
+    userId: string;
+    email: string;
+    role: OrganizationUserRole;
+  } | null>(null);
 
-  const currentUserRole = user?.role || "user";
-  const hasPermissionToInvite = rolePermissions[currentUserRole].includes(
-    "invite_user_to_organization",
-  );
+  const currentUserRole = user?.role ?? "user";
 
-  const handleRoleSelectionClick = (id: string, role: OrganizationUserRole) => {
-    updateMemberRole({ userId: id, role });
+  const { hasPermission } = usePermission(currentUserRole);
+  const hasPermissionToInvite = hasPermission("invite_user_to_organization");
+
+  const handleRoleSelectionClick = (
+    member: OrganizationMember,
+    role: OrganizationUserRole,
+  ) => {
+    if (role === member.role) return;
+
+    setPendingRoleChange({
+      userId: member.user_id,
+      email: member.email,
+      role,
+    });
+  };
+
+  const handleConfirmRoleChange = () => {
+    if (pendingRoleChange) {
+      updateMemberRole(
+        { userId: pendingRoleChange.userId, role: pendingRoleChange.role },
+        {
+          onSuccess: () => setPendingRoleChange(null),
+        },
+      );
+    }
+  };
+
+  const handleCancelRoleChange = () => {
+    setPendingRoleChange(null);
   };
 
   const handleRemoveMember = (userId: string) => {
     removeMember({ userId });
   };
 
-  const checkIfUserHasPermissionToChangeRole = (
-    memberId: string,
-    memberRole: OrganizationUserRole,
-  ) => {
-    if (!user) return false;
+  const availableRolesToChangeTo = getAvailableRolesAUserCanAssign(
+    rolePermissions[currentUserRole],
+  );
 
-    // Users cannot change their own role
-    if (memberId === user.id) return false;
-
-    // Owners cannot change another owner's role
-    if (user.role === "owner" && memberRole === "owner") return false;
-
-    // Admins cannot change another admin's role
-    if (user.role === "admin" && memberRole === "admin") return false;
-
-    const userPermissions = rolePermissions[user.role];
-    return userPermissions.includes(`change_user_role:${memberRole}`);
-  };
-
-  const availableRolesToChangeTo = React.useMemo((): OrganizationUserRole[] => {
-    if (!user) return [];
-    const availableRoles: OrganizationUserRole[] = [];
-    const userPermissions = rolePermissions[user.role];
-
-    if (userPermissions.includes("change_user_role:owner")) {
-      availableRoles.push("owner");
-    }
-    if (userPermissions.includes("change_user_role:admin")) {
-      availableRoles.push("admin");
-    }
-    if (userPermissions.includes("change_user_role:user")) {
-      availableRoles.push("user");
-    }
-
-    return availableRoles;
-  }, [user]);
+  const canAssignUserRole = (member: OrganizationMember) =>
+    user != null &&
+    user?.user_id !== member.user_id &&
+    user?.role !== member.role &&
+    hasPermission(`change_user_role:${member.role}`);
 
   return (
     <div
@@ -114,11 +118,21 @@ function ManageOrganizationMembers() {
           document.getElementById("portal-root") || document.body,
         )}
 
+      {pendingRoleChange && (
+        <ConfirmRoleChangeModal
+          email={pendingRoleChange.email}
+          newRole={pendingRoleChange.role}
+          isPending={isPending}
+          onConfirm={handleConfirmRoleChange}
+          onCancel={handleCancelRoleChange}
+        />
+      )}
+
       {organizationMembers && (
         <ul>
           {organizationMembers.map((member) => (
             <li
-              key={member.id}
+              key={member.user_id}
               data-testid="member-item"
               className="border-b border-tertiary"
             >
@@ -126,15 +140,10 @@ function ManageOrganizationMembers() {
                 email={member.email}
                 role={member.role}
                 status={member.status}
-                hasPermissionToChangeRole={checkIfUserHasPermissionToChangeRole(
-                  member.id,
-                  member.role,
-                )}
+                hasPermissionToChangeRole={canAssignUserRole(member)}
                 availableRolesToChangeTo={availableRolesToChangeTo}
-                onRoleChange={(role) =>
-                  handleRoleSelectionClick(member.id, role)
-                }
-                onRemove={() => handleRemoveMember(member.id)}
+                onRoleChange={(role) => handleRoleSelectionClick(member, role)}
+                onRemove={() => handleRemoveMember(member.user_id)}
               />
             </li>
           ))}

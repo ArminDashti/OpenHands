@@ -2,7 +2,7 @@ import { queryClient } from "#/query-client-config";
 import { OrganizationMember } from "#/types/org";
 import { organizationService } from "#/api/organization-service/organization-service.api";
 
-export const getMeFromQueryClient = (orgId: string | undefined) =>
+export const getMeFromQueryClient = (orgId: string | null) =>
   queryClient.getQueryData<OrganizationMember>(["organizations", orgId, "me"]);
 
 export const getSelectedOrgFromQueryClient = () =>

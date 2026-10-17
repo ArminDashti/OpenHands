@@ -7,7 +7,7 @@ import { selectOrganization, createGetMeResponse } from "test-utils";
 import ManageOrg from "#/routes/manage-org";
 import { organizationService } from "#/api/organization-service/organization-service.api";
 import SettingsScreen, { clientLoader } from "#/routes/settings";
-import { resetOrgMockData } from "#/mocks/org-handlers";
+import { resetOrgMockData, MOCK_TEAM_ORG_ACME } from "#/mocks/org-handlers";
 import OptionService from "#/api/option-service/option-service.api";
 import BillingService from "#/api/billing-service/billing-service.api";
 import { OrganizationMember } from "#/types/org";
@@ -54,6 +54,26 @@ const { navigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
 }));
 
+vi.mock("react-i18next", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => {
+        const translations: Record<string, string> = {
+          "ORG$SELECT_ORGANIZATION_PLACEHOLDER": "Please select an organization",
+          "ORG$PERSONAL_WORKSPACE": "Personal Workspace",
+        };
+        return translations[key] || key;
+      },
+      i18n: {
+        changeLanguage: vi.fn(),
+      },
+    }),
+  };
+});
+
 vi.mock("react-router", async () => ({
   ...(await vi.importActual("react-router")),
   useNavigate: () => navigateMock,
@@ -63,18 +83,30 @@ describe("Manage Org Route", () => {
   const getMeSpy = vi.spyOn(organizationService, "getMe");
 
   // Test data constants
-  const TEST_USERS = {
+  const TEST_USERS: Record<"OWNER" | "ADMIN", OrganizationMember> = {
     OWNER: {
-      id: "1",
+      org_id: "1",
+      user_id: "1",
       email: "test@example.com",
-      role: "owner" as const,
-      status: "active" as const,
+      role: "owner",
+      llm_api_key: "**********",
+      max_iterations: 20,
+      llm_model: "gpt-4",
+      llm_api_key_for_byor: null,
+      llm_base_url: "https://api.openai.com",
+      status: "active",
     },
     ADMIN: {
-      id: "1",
+      org_id: "1",
+      user_id: "1",
       email: "test@example.com",
-      role: "admin" as const,
-      status: "active" as const,
+      role: "admin",
+      llm_api_key: "**********",
+      max_iterations: 20,
+      llm_model: "gpt-4",
+      llm_api_key_for_byor: null,
+      llm_base_url: "https://api.openai.com",
+      status: "active",
     },
   };
 
@@ -92,10 +124,22 @@ describe("Manage Org Route", () => {
   };
 
   beforeEach(() => {
+    // Set Zustand store to a team org so clientLoader's org route protection allows access
+    useSelectedOrganizationStore.setState({ organizationId: MOCK_TEAM_ORG_ACME.id });
+    // Seed organizations into the module-level queryClient used by clientLoader
+    mockQueryClient.setQueryData(["organizations"], [MOCK_TEAM_ORG_ACME]);
+
     const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-    // @ts-expect-error - only return APP_MODE for these tests
+    // @ts-expect-error - partial mock for testing
     getConfigSpy.mockResolvedValue({
-      APP_MODE: "saas",
+      app_mode: "saas",
+      feature_flags: {
+        enable_billing: true, // Enable billing by default so billing UI is shown
+        hide_llm_settings: false,
+        enable_jira: false,
+        enable_jira_dc: false,
+        enable_linear: false,
+      },
     });
 
     // Set default mock for user (owner role has all permissions)
@@ -107,7 +151,10 @@ describe("Manage Org Route", () => {
     vi.clearAllMocks();
     // Reset organization mock data to ensure clean state between tests
     resetOrgMockData();
-    vi.clearAllMocks();
+    // Reset Zustand store to ensure clean state between tests
+    useSelectedOrganizationStore.setState({ organizationId: null });
+    // Clear module-level queryClient used by clientLoader
+    mockQueryClient.clear();
   });
 
   it("should render the available credits", async () => {
@@ -118,18 +165,19 @@ describe("Manage Org Route", () => {
 
     await waitFor(() => {
       const credits = screen.getByTestId("available-credits");
-      expect(credits).toHaveTextContent("1000");
+      expect(credits).toHaveTextContent("100");
     });
   });
 
   it("should render account details", async () => {
     renderManageOrg();
+    await screen.findByTestId("manage-org-screen");
 
     await selectOrganization({ orgIndex: 0 });
 
     await waitFor(() => {
       const orgName = screen.getByTestId("org-name");
-      expect(orgName).toHaveTextContent("Acme Corp");
+      expect(orgName).toHaveTextContent("Personal Workspace");
 
       const billingInfo = screen.getByTestId("billing-info");
       expect(billingInfo).toHaveTextContent("**** **** **** 1234");
@@ -148,8 +196,8 @@ describe("Manage Org Route", () => {
     await selectOrganization({ orgIndex: 0 }); // user is owner in org 1
 
     expect(screen.queryByTestId("add-credits-form")).not.toBeInTheDocument();
-    // Simulate adding credits
-    const addCreditsButton = screen.getByText(/add/i);
+    // Simulate adding credits — wait for permissions-dependent button
+    const addCreditsButton = await waitFor(() => screen.getByText(/add/i));
     await userEvent.click(addCreditsButton);
 
     const addCreditsForm = screen.getByTestId("add-credits-form");
@@ -182,8 +230,8 @@ describe("Manage Org Route", () => {
     await selectOrganization({ orgIndex: 0 }); // user is owner in org 1
 
     expect(screen.queryByTestId("add-credits-form")).not.toBeInTheDocument();
-    // Simulate adding credits
-    const addCreditsButton = screen.getByText(/add/i);
+    // Simulate adding credits — wait for permissions-dependent button
+    const addCreditsButton = await waitFor(() => screen.getByText(/add/i));
     await userEvent.click(addCreditsButton);
 
     const addCreditsForm = screen.getByTestId("add-credits-form");
@@ -207,7 +255,7 @@ describe("Manage Org Route", () => {
 
       await selectOrganization({ orgIndex: 0 }); // user is owner in org 1
 
-      const addCreditsButton = screen.getByText(/add/i);
+      const addCreditsButton = await waitFor(() => screen.getByText(/add/i));
       await user.click(addCreditsButton);
 
       const addCreditsForm = screen.getByTestId("add-credits-form");
@@ -512,7 +560,7 @@ describe("Manage Org Route", () => {
     renderManageOrg();
     await screen.findByTestId("manage-org-screen");
 
-    await selectOrganization({ orgIndex: 2 }); // user is admin in org 3
+    await selectOrganization({ orgIndex: 3 }); // user is admin in org 4 (All Hands AI)
 
     // Verify credits are shown
     await waitFor(() => {
@@ -535,7 +583,7 @@ describe("Manage Org Route", () => {
 
       // @ts-expect-error - only return the properties we need for this test
       getConfigSpy.mockResolvedValue({
-        APP_MODE: "saas", // required to enable getMe
+        app_mode: "saas", // required to enable getMe
       });
 
       renderManageOrg();
@@ -544,7 +592,9 @@ describe("Manage Org Route", () => {
       await selectOrganization({ orgIndex: 0 });
 
       const orgName = screen.getByTestId("org-name");
-      await waitFor(() => expect(orgName).toHaveTextContent("Acme Corp"));
+      await waitFor(() =>
+        expect(orgName).toHaveTextContent("Personal Workspace"),
+      );
 
       expect(
         screen.queryByTestId("update-org-name-form"),
@@ -584,7 +634,7 @@ describe("Manage Org Route", () => {
       renderManageOrg();
       await screen.findByTestId("manage-org-screen");
 
-      await selectOrganization({ orgIndex: 2 }); // user is admin in org 3
+      await selectOrganization({ orgIndex: 3 }); // user is admin in org 4 (All Hands AI)
 
       const orgName = screen.getByTestId("org-name");
       const changeOrgNameButton = within(orgName).queryByRole("button", {
@@ -599,13 +649,13 @@ describe("Manage Org Route", () => {
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
       // @ts-expect-error - only return the properties we need for this test
       getConfigSpy.mockResolvedValue({
-        APP_MODE: "saas", // required to enable getMe
+        app_mode: "saas", // required to enable getMe
       });
 
       renderManageOrg();
       await screen.findByTestId("manage-org-screen");
 
-      await selectOrganization({ orgIndex: 2 }); // user is admin in org 3
+      await selectOrganization({ orgIndex: 3 }); // user is admin in org 4 (All Hands AI)
 
       const deleteOrgButton = screen.queryByRole("button", {
         name: /ORG\$DELETE_ORGANIZATION/i,
@@ -625,9 +675,11 @@ describe("Manage Org Route", () => {
         screen.queryByTestId("delete-org-confirmation"),
       ).not.toBeInTheDocument();
 
-      const deleteOrgButton = screen.getByRole("button", {
-        name: /ORG\$DELETE_ORGANIZATION/i,
-      });
+      const deleteOrgButton = await waitFor(() =>
+        screen.getByRole("button", {
+          name: /ORG\$DELETE_ORGANIZATION/i,
+        }),
+      );
       await userEvent.click(deleteOrgButton);
 
       const deleteConfirmation = screen.getByTestId("delete-org-confirmation");
@@ -682,18 +734,42 @@ describe("Manage Org Route", () => {
           "1",
         );
 
-        renderManageOrg();
-        await screen.findByTestId("manage-org-screen");
+      renderManageOrg();
+      await screen.findByTestId("manage-org-screen");
 
-        await selectOrganization({ orgIndex: 0 });
+      await selectOrganization({ orgIndex: 0 });
 
-        const deleteButton = screen.queryByRole("button", {
-          name: /ORG\$DELETE_ORGANIZATION/i,
-        });
+      const deleteButton = screen.queryByRole("button", {
+        name: /ORG\$DELETE_ORGANIZATION/i,
+      });
 
-        expect(deleteButton).not.toBeInTheDocument();
-      },
-    );
+      expect(deleteButton).not.toBeInTheDocument();
+    });
+
+    it("should not show delete organization button when user lacks canDeleteOrganization permission ('User' role)", async () => {
+      setupUserMock({
+        org_id: "1",
+        user_id: "1",
+        email: "test@example.com",
+        role: "user",
+        llm_api_key: "**********",
+        max_iterations: 20,
+        llm_model: "gpt-4",
+        llm_api_key_for_byor: null,
+        llm_base_url: "https://api.openai.com",
+        status: "active",
+      });
+
+      // Members lack view_billing permission, so the clientLoader redirects away from /settings/org
+      renderManageOrg();
+
+      // The manage-org screen should NOT be accessible — clientLoader redirects
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("manage-org-screen"),
+        ).not.toBeInTheDocument();
+      });
+    });
 
     it("should open delete confirmation modal when delete button is clicked (with permission)", async () => {
       setupUserMock(TEST_USERS.OWNER, "1");
@@ -713,6 +789,125 @@ describe("Manage Org Route", () => {
       await userEvent.click(deleteButton);
 
       expect(screen.getByTestId("delete-org-confirmation")).toBeInTheDocument();
+    });
+  });
+
+  describe("enable_billing feature flag", () => {
+    it("should show credits section when enable_billing is true", async () => {
+      // Arrange
+      const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+      // @ts-expect-error - partial mock for testing
+      getConfigSpy.mockResolvedValue({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+        },
+      });
+
+      // Act
+      renderManageOrg();
+      await screen.findByTestId("manage-org-screen");
+      await selectOrganization({ orgIndex: 0 });
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByTestId("available-credits")).toBeInTheDocument();
+      });
+
+      getConfigSpy.mockRestore();
+    });
+
+    it("should show billing information section when enable_billing is true", async () => {
+      // Arrange
+      const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+      // @ts-expect-error - partial mock for testing
+      getConfigSpy.mockResolvedValue({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+        },
+      });
+
+      // Act
+      renderManageOrg();
+      await screen.findByTestId("manage-org-screen");
+      await selectOrganization({ orgIndex: 0 });
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByTestId("billing-info")).toBeInTheDocument();
+      });
+
+      getConfigSpy.mockRestore();
+    });
+
+    it("should show Add Credits button when enable_billing is true", async () => {
+      // Arrange
+      const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+      // @ts-expect-error - partial mock for testing
+      getConfigSpy.mockResolvedValue({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+        },
+      });
+
+      // Act
+      renderManageOrg();
+      await screen.findByTestId("manage-org-screen");
+      await selectOrganization({ orgIndex: 0 });
+
+      // Assert
+      await waitFor(() => {
+        const addButton = screen.getByText(/add/i);
+        expect(addButton).toBeInTheDocument();
+      });
+
+      getConfigSpy.mockRestore();
+    });
+
+    it("should hide all billing-related elements when enable_billing is false", async () => {
+      // Arrange
+      const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+      // @ts-expect-error - partial mock for testing
+      getConfigSpy.mockResolvedValue({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: false,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+        },
+      });
+
+      // Act
+      renderManageOrg();
+      await screen.findByTestId("manage-org-screen");
+      await selectOrganization({ orgIndex: 0 });
+
+      // Assert
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("available-credits"),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByTestId("billing-info")).not.toBeInTheDocument();
+        expect(screen.queryByText(/add/i)).not.toBeInTheDocument();
+      });
+
+      getConfigSpy.mockRestore();
     });
   });
 });

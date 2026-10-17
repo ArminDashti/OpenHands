@@ -23,8 +23,10 @@ export const organizationService = {
   },
 
   getOrganizations: async () => {
-    const { data } = await openHands.get<Organization[]>("/api/organizations");
-    return data;
+    const { data } = await openHands.get<{ items: Organization[] }>(
+      "/api/organizations",
+    );
+    return data?.items || [];
   },
 
   updateOrganization: async ({
@@ -46,10 +48,10 @@ export const organizationService = {
   },
 
   getOrganizationMembers: async ({ orgId }: { orgId: string }) => {
-    const { data } = await openHands.get<OrganizationMember[]>(
+    const { data } = await openHands.get<{ items: OrganizationMember[] }>(
       `/api/organizations/${orgId}/members`,
     );
-    return data;
+    return data?.items || [];
   },
 
   getOrganizationPaymentInfo: async ({ orgId }: { orgId: string }) => {
@@ -59,22 +61,17 @@ export const organizationService = {
     return data;
   },
 
-  updateMemberRole: async ({
+  updateMember: async ({
     orgId,
     userId,
-    role,
+    ...updateData
   }: {
     orgId: string;
     userId: string;
-    role: OrganizationUserRole;
-  }) => {
+  } & UpdateOrganizationMemberParams) => {
     const { data } = await openHands.patch(
-      `/api/organizations/${orgId}/members`,
-      {
-        orgId,
-        userId,
-        role,
-      },
+      `/api/organizations/${orgId}/members/${userId}`,
+      updateData,
     );
 
     return data;
@@ -98,12 +95,19 @@ export const organizationService = {
     emails: string[];
   }) => {
     const { data } = await openHands.post<OrganizationMember[]>(
-      `/api/organizations/${orgId}/invite/batch`,
+      `/api/organizations/${orgId}/members/invite`,
       {
         emails,
       },
     );
 
+    return data;
+  },
+
+  switchOrganization: async ({ orgId }: { orgId: string }) => {
+    const { data } = await openHands.post<Organization>(
+      `/api/organizations/${orgId}/switch`,
+    );
     return data;
   },
 };

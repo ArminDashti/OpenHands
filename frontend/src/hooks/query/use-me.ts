@@ -6,9 +6,9 @@ import { OrganizationMember } from "#/types/org";
 
 export const useMe = () => {
   const { data: config } = useConfig();
-  const { orgId } = useSelectedOrganizationId();
+  const { organizationId } = useSelectedOrganizationId();
 
-  const isSaas = config?.APP_MODE === "saas";
+  const isSaas = config?.app_mode === "saas";
 
   return useQuery({
     queryKey: ["organizations", orgId, "me"],
