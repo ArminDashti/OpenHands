@@ -27,6 +27,9 @@ export function GitHubRepositorySelector({
   const { t } = useTranslation();
   const { data: config } = useConfig();
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [searchedRepo, setSearchedRepo] = React.useState<GitHubRepository | null>(null);
+  const [isSearching, setIsSearching] = React.useState<boolean>(false);
 
   const allRepositories: GitHubRepository[] = [
     ...publicRepositories.filter(
@@ -66,6 +69,8 @@ export function GitHubRepositorySelector({
       placeholder={t(I18nKey.LANDING$SELECT_REPO)}
       isVirtualized={false}
       selectedKey={selectedKey}
+      inputValue={searchQuery}
+      onInputChange={(value) => setSearchQuery(value)}
       inputProps={{
         classNames: {
           inputWrapper:
@@ -76,7 +81,7 @@ export function GitHubRepositorySelector({
       onInputChange={onInputChange}
       clearButtonProps={{ onPress: handleClearSelection }}
       listboxProps={{
-        emptyContent,
+        emptyContent: isSearching ? "Searching..." : emptyContent,
       }}
       defaultFilter={(textValue, inputValue) =>
         !inputValue ||
