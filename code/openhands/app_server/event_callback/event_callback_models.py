@@ -29,6 +29,12 @@ else:
 
 
 class EventCallbackProcessor(DiscriminatedUnionMixin, ABC):
+    event_kind: ClassVar[EventKind] = 'MessageEvent'
+
+    @classmethod
+    def get_event_kind(cls) -> EventKind:
+        return cls.event_kind
+
     @abstractmethod
     async def __call__(
         self,
@@ -65,11 +71,9 @@ class CreateEventCallbackRequest(OpenHandsModel):
         ),
     )
     processor: EventCallbackProcessor
-    event_kind: EventKind | None = Field(
-        default=None,
-        description=(
-            'Optional filter on the type of events to which this callback applies'
-        ),
+    event_kind: EventKind = Field(
+        default='MessageEvent',
+        description='Type of event to which this callback applies',
     )
 
 
