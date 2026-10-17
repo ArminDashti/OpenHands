@@ -7,6 +7,7 @@ from openhands.core.config.config_utils import (
 )
 from openhands.core.config.llm_config import LLMConfig
 from openhands.core.config.sandbox_config import SandboxConfig
+from openhands.core.config.search_config import SearchConfig
 from openhands.core.config.security_config import SecurityConfig
 from openhands.core.config.utils import (
     finalize_config,
@@ -25,6 +26,7 @@ __all__ = [
     'AppConfig',
     'LLMConfig',
     'SandboxConfig',
+    'SearchConfig',
     'SecurityConfig',
     'load_app_config',
     'load_from_env',

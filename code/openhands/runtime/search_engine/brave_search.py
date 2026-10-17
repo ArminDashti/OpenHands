@@ -4,6 +4,7 @@ import re
 import requests
 import tenacity
 
+from openhands.core.config import AppConfig
 from openhands.events.action import SearchAction
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.search_engine import SearchEngineObservation
