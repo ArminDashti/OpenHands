@@ -7,6 +7,7 @@ import GlobeIcon from "#/icons/globe.svg?react";
 import ServerIcon from "#/icons/server.svg?react";
 import GitChanges from "#/icons/git_changes.svg?react";
 import VSCodeIcon from "#/icons/vscode.svg?react";
+import ListIcon from "#/icons/list.svg?react";
 import { cn } from "#/utils/utils";
 import { ConversationTabNav } from "./conversation-tab-nav";
 import { ChatActionTooltip } from "../../chat/chat-action-tooltip";
@@ -106,7 +107,18 @@ export function ConversationTabs() {
       tooltipContent: t(I18nKey.COMMON$BROWSER),
       tooltipAriaLabel: t(I18nKey.COMMON$BROWSER),
     },
+    {
+      isActive: isTabActive("tasks"),
+      icon: ListIcon,
+      onClick: () => onTabSelected("tasks"),
+      tooltipContent: t(I18nKey.COMMON$TASKS),
+      tooltipAriaLabel: t(I18nKey.COMMON$TASKS),
+    },
   ];
+
+  // Debug logging to help troubleshoot tab visibility
+  console.log("ConversationTabs: Rendering", tabs.length, "tabs");
+  console.log("ConversationTabs: Tasks tab config:", tabs[tabs.length - 1]);
 
   return (
     <div
@@ -129,6 +141,7 @@ export function ConversationTabs() {
               icon={icon}
               onClick={onClick}
               isActive={isActive}
+              data-testid={index === tabs.length - 1 ? "tasks-tab" : undefined}
             />
           </ChatActionTooltip>
         ),
