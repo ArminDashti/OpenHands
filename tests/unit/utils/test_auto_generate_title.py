@@ -16,6 +16,7 @@ from openhands.server.conversation_manager.standalone_conversation_manager impor
 from openhands.server.monitoring import MonitoringListener
 from openhands.storage.data_models.settings import Settings
 from openhands.storage.memory import InMemoryFileStore
+from openhands.storage.paths import ConversationPaths
 from openhands.utils.conversation_summary import auto_generate_title
 
 
