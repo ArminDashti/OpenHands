@@ -229,12 +229,12 @@ export function useInitialQuery() {
       query.data?.selectedRepository || initialState.selectedRepository,
     isLoading: query.isLoading,
     // Actions
-    addFile: addFileMutation.mutate,
-    removeFile: removeFileMutation.mutate,
-    clearFiles: clearFilesMutation.mutate,
-    setInitialPrompt: setInitialPromptMutation.mutate,
-    clearInitialPrompt: clearInitialPromptMutation.mutate,
-    setSelectedRepository: setSelectedRepositorySync, // Use the synchronous function directly
-    clearSelectedRepository: clearSelectedRepositoryMutation.mutate,
+    addFile,
+    removeFile,
+    clearFiles,
+    setInitialPrompt,
+    clearInitialPrompt,
+    setSelectedRepository,
+    clearSelectedRepository,
   };
 }
