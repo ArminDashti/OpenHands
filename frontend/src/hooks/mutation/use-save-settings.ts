@@ -19,7 +19,7 @@ const saveSettingsMutationFn = async (settings: Partial<Settings>) => {
     llm_api_key: settings.LLM_API_KEY?.trim() || undefined,
   };
 
-  await OpenHands.saveSettings(apiSettings);
+  await SettingsService.saveSettings(apiSettings);
 };
 
 export const useSaveSettings = () => {

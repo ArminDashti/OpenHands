@@ -10,6 +10,7 @@ import HomeScreen from "#/routes/home";
 import { AuthProvider } from "#/context/auth-context";
 import * as GitService from "#/api/git";
 import { GitRepository } from "#/types/git";
+import SettingsService from "#/settings-service/settings-service.api";
 import OpenHands from "#/api/open-hands";
 import MainApp from "#/routes/root-layout";
 
@@ -286,7 +287,7 @@ describe("HomeScreen", () => {
 
 describe("Settings 404", () => {
   const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-  const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+  const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
 
   it("should open the settings modal if GET /settings fails with a 404", async () => {
     const error = createAxiosNotFoundErrorObject();
@@ -346,7 +347,7 @@ describe("Settings 404", () => {
 
 describe("Setup Payment modal", () => {
   const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-  const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+  const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
 
   it("should only render if SaaS mode and is new user", async () => {
     // @ts-expect-error - we only need the APP_MODE for this test
