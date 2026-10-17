@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from openhands.app_server.services.injector import Injector
 from openhands.app_server.user.user_models import (

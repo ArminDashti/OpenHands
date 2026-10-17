@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator
+from uuid import UUID
 
 from fastapi import Request
 from pydantic import PrivateAttr
