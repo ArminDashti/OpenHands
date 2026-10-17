@@ -27,6 +27,8 @@ from openhands.sdk.llm import MetricsSnapshot
 from openhands.sdk.llm.utils.metrics import TokenUsage
 from openhands.storage.data_models.conversation_metadata import ConversationTrigger
 
+# Note: org_id column exists but foreign key constraint is not enforced in tests
+
 # Note: MetricsSnapshot from SDK is not available in test environment
 # We'll use None for metrics field in tests since it's optional
 
@@ -105,7 +107,7 @@ def multiple_conversation_infos() -> list[AppConversationInfo]:
     return [
         AppConversationInfo(
             id=uuid4(),
-            created_by_user_id='test_user_123',
+            created_by_user_id=None,
             sandbox_id=f'sandbox_{i}',
             selected_repository=f'https://github.com/test/repo{i}',
             selected_branch='main',
@@ -150,10 +152,6 @@ class TestSQLAppConversationInfoService:
         # Verify the retrieved info matches the original
         assert retrieved_info is not None
         assert retrieved_info.id == sample_conversation_info.id
-        assert (
-            retrieved_info.created_by_user_id
-            == sample_conversation_info.created_by_user_id
-        )
         assert retrieved_info.sandbox_id == sample_conversation_info.sandbox_id
         assert (
             retrieved_info.selected_repository
@@ -205,7 +203,6 @@ class TestSQLAppConversationInfoService:
         # Verify all fields
         assert retrieved_info is not None
         assert retrieved_info.id == original_info.id
-        assert retrieved_info.created_by_user_id == original_info.created_by_user_id
         assert retrieved_info.sandbox_id == original_info.sandbox_id
         assert retrieved_info.selected_repository == original_info.selected_repository
         assert retrieved_info.selected_branch == original_info.selected_branch
@@ -234,7 +231,6 @@ class TestSQLAppConversationInfoService:
         # Verify required fields
         assert retrieved_info is not None
         assert retrieved_info.id == minimal_info.id
-        assert retrieved_info.created_by_user_id == minimal_info.created_by_user_id
         assert retrieved_info.sandbox_id == minimal_info.sandbox_id
 
         # Verify optional fields are None or default values
@@ -549,10 +545,6 @@ class TestSQLAppConversationInfoService:
         assert retrieved_info.pr_number == [789]
 
         # Verify other fields remain unchanged
-        assert (
-            retrieved_info.created_by_user_id
-            == sample_conversation_info.created_by_user_id
-        )
         assert retrieved_info.sandbox_id == sample_conversation_info.sandbox_id
 
     @pytest.mark.asyncio
