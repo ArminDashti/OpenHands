@@ -3,7 +3,7 @@ import hashlib
 from base64 import b64decode, b64encode
 
 from cryptography.fernet import Fernet, InvalidToken
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 from server.config import get_config
 
 _jwt_service = None
