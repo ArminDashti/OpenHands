@@ -6,7 +6,6 @@ This is similar to the functionality of `CodeActResponseParser`.
 import json
 
 from litellm import (
-    ChatCompletionToolParam,
     ModelResponse,
 )
 
@@ -293,7 +292,7 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
             # ================================================
             elif tool_call.function.name.endswith(MCPClientTool.postfix()):
                 action = McpAction(
-                    name=tool_call.function.name.rstrip(MCPClientTool.postfix()),
+                    name=tool_call.function.name.removesuffix(MCPClientTool.postfix()),
                     arguments=tool_call.function.arguments,
                 )
             else:

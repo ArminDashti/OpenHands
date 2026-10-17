@@ -51,11 +51,15 @@ describe("GitHubRepositorySelector", () => {
         id: 1,
         full_name: "test/repo1",
         stargazers_count: 100,
+        is_public: true,
+        pushed_at: "2023-01-01T00:00:00Z",
       },
       {
         id: 2,
         full_name: "test/repo2",
         stargazers_count: 200,
+        is_public: true,
+        pushed_at: "2023-01-02T00:00:00Z",
       },
     ];
 

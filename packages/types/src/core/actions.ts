@@ -9,6 +9,16 @@ export interface UserMessageAction extends OpenHandsActionEvent<"message"> {
   };
 }
 
+export interface SystemMessageAction extends OpenHandsActionEvent<"system"> {
+  source: "agent";
+  args: {
+    content: string;
+    tools: Array<Record<string, unknown>> | null;
+    openhands_version: string | null;
+    agent_class: string | null;
+  };
+}
+
 export interface CommandAction extends OpenHandsActionEvent<"run"> {
   source: "agent" | "user";
   args: {
@@ -151,6 +161,7 @@ export interface TaskTrackingAction
 export type OpenHandsAction =
   | UserMessageAction
   | AssistantMessageAction
+  | SystemMessageAction
   | CommandAction
   | IPythonAction
   | ThinkAction

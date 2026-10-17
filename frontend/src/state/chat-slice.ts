@@ -11,7 +11,15 @@ import { OpenHandsAction } from "#/types/core/actions";
 import { OpenHandsEventType } from "#/types/core/base";
 import { Message, ActionMessage, ErrorMessage } from "#/types/message";
 
-type SliceState = { messages: Message[] };
+type SliceState = {
+  messages: Message[];
+  systemMessage: {
+    content: string;
+    tools: Array<Record<string, unknown>> | null;
+    openhands_version: string | null;
+    agent_class: string | null;
+  } | null;
+};
 
 const MAX_CONTENT_LENGTH = 1000;
 
@@ -46,6 +54,7 @@ function getRiskText(risk: ActionSecurityRisk) {
 
 const initialState: SliceState = {
   messages: [],
+  systemMessage: null,
 };
 
 export const chatSlice = createSlice({
@@ -165,7 +174,13 @@ export const chatSlice = createSlice({
       // Set success property based on observation type
       if (observationID === "run") {
         const commandObs = observation.payload as CommandObservation;
-        causeMessage.success = commandObs.extras.metadata.exit_code === 0;
+        // If exit_code is -1, it means the command timed out, so we set success to undefined
+        // to not show any status indicator
+        if (commandObs.extras.metadata.exit_code === -1) {
+          causeMessage.success = undefined;
+        } else {
+          causeMessage.success = commandObs.extras.metadata.exit_code === 0;
+        }
       } else if (observationID === "run_ipython") {
         // For IPython, we consider it successful if there's no error message
         const ipythonObs = observation.payload as IPythonObservation;
@@ -239,6 +254,7 @@ export const chatSlice = createSlice({
 
     clearMessages(state: SliceState) {
       state.messages = [];
+      state.systemMessage = null;
     },
 
     setMessageFeedback(
@@ -268,4 +284,9 @@ export const {
   clearMessages,
   setMessageFeedback,
 } = chatSlice.actions;
+
+// Selectors
+export const selectSystemMessage = (state: { chat: SliceState }) =>
+  state.chat.systemMessage;
+
 export default chatSlice.reducer;

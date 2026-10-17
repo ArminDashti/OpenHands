@@ -14,6 +14,7 @@ export const useEndSession = () => {
 
   /**
    * End the current session by clearing the token and redirecting to the home page.
+   * @param {boolean} preserveLastPage - If true, don't clear the last page from localStorage
    */
   const endSession = () => {
     // Clear the last page when starting a new project
@@ -24,6 +25,15 @@ export const useEndSession = () => {
     // Reset browser state to initial values
     dispatch(setUrl(browserInitialState.url));
     dispatch(setScreenshotSrc(browserInitialState.screenshotSrc));
+
+    // Check if the current page is a conversation page
+    const isConversationPage = window.location.pathname.includes("/conversations/");
+    
+    // Clear the last page from localStorage unless preserveLastPage is true
+    // and we're on a conversation page (to preserve the URL for after login)
+    if (!preserveLastPage) {
+      clearLastPage();
+    }
 
     navigate("/");
   };

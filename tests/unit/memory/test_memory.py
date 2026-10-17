@@ -68,6 +68,16 @@ async def test_memory_on_event_exception_handling(memory, event_stream):
     agent.llm.metrics = Metrics()
     agent.llm.config = AppConfig().get_llm_config()
 
+    # Add a proper system message mock
+    system_message = SystemMessageAction(content='Test system message')
+    system_message._source = EventSource.AGENT
+    system_message._id = -1  # Set invalid ID to avoid the ID check
+    agent.get_system_message.return_value = system_message
+
+
+@pytest.mark.asyncio
+async def test_memory_on_event_exception_handling(memory, event_stream, mock_agent):
+    """Test that exceptions in Memory.on_event are properly handled via status callback."""
     # Create a mock runtime
     runtime = MagicMock(spec=Runtime)
     runtime.event_stream = event_stream
@@ -81,7 +91,7 @@ async def test_memory_on_event_exception_handling(memory, event_stream):
             initial_user_action=MessageAction(content='Test message'),
             runtime=runtime,
             sid='test',
-            agent=agent,
+            agent=mock_agent,
             fake_user_response_fn=lambda _: 'repeat',
             memory=memory,
         )
@@ -119,7 +129,7 @@ async def test_memory_on_first_microagent_action_exception_handling(
             initial_user_action=MessageAction(content='Test message'),
             runtime=runtime,
             sid='test',
-            agent=agent,
+            agent=mock_agent,
             fake_user_response_fn=lambda _: 'repeat',
             memory=memory,
         )

@@ -98,6 +98,7 @@ function isRawTranslationKey(str: string): boolean {
 // Specific technical strings that should be excluded from localization
 const EXCLUDED_TECHNICAL_STRINGS = [
   "openid email profile", // OAuth scope string - not user-facing
+  "OPEN_ISSUE", // Task type identifier, not a UI string
 ];
 
 function isExcludedTechnicalString(str: string): boolean {
@@ -352,8 +353,8 @@ function isCommonDevelopmentString(str: string): boolean {
 
   // HTML tags and attributes
   if (
-    /^<[a-z0-9]+>.*<\/[a-z0-9]+>$/.test(str) ||
-    /^<[a-z0-9]+ [^>]+\/>$/.test(str)
+    /^<[a-z0-9]+(?:\s[^>]*)?>.*<\/[a-z0-9]+>$/i.test(str) ||
+    /^<[a-z0-9]+ [^>]+\/>$/i.test(str)
   ) {
     return true;
   }
@@ -421,6 +422,7 @@ function isCommonDevelopmentString(str: string): boolean {
 
   // Check for specific error messages and UI text
   if (
+    str === "Failed to accept TOS:" ||
     str === "All data associated with this project will be lost." ||
     str === "You will lose any unsaved information." ||
     str ===
