@@ -22,6 +22,18 @@ export interface WebClientFeatureFlags {
   hide_users_page: boolean;
 }
 
+/**
+ * Wire shape of an entry in the SDK's ``ACP_PROVIDERS`` registry — mirrored
+ * verbatim from ``openhands.sdk.settings.ACPProviderInfo``. The backend
+ * serialises the SDK dataclass directly; only the fields the frontend
+ * actually reads are typed here.
+ */
+export interface ACPProviderInfo {
+  key: string;
+  display_name: string;
+  default_command: string[];
+}
+
 export interface WebClientConfig {
   feature_flags: WebClientFeatureFlags;
   providers_configured: Provider[];

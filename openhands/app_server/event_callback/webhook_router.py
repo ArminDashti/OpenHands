@@ -89,13 +89,14 @@ async def valid_conversation(
 
 @router.post('/{sandbox_id}/conversations')
 async def on_conversation_update(
-    conversation_info: ACPConversationInfo,
+    conversation_info: ConversationInfo,
     sandbox_info: SandboxInfo = Depends(valid_sandbox),
     app_conversation_info_service: AppConversationInfoService = app_conversation_info_service_dependency,
 ) -> Success:
     """Webhook callback for when a conversation starts, pauses, resumes, or deletes.
 
-    Accepts ACPConversationInfo so ACP-agent conversations are handled too.
+    `ConversationInfo.agent` is the discriminated `AgentBase` union, so both
+    OpenHands `Agent` and `ACPAgent` payloads are accepted on the same route.
     """
     existing = await valid_conversation(
         conversation_info.id, sandbox_info, app_conversation_info_service

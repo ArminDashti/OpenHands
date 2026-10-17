@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AxiosError } from "axios";
 import { useSettings } from "#/hooks/query/use-settings";
@@ -14,6 +14,7 @@ import {
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
+import type { ACPProviderInfo } from "#/api/option-service/option.types";
 
 export const handle = { hideTitle: true };
 
@@ -83,7 +84,7 @@ function AgentSettingsScreen() {
       setAgentType("openhands");
     }
     setIsDirty(false);
-  }, [settings]);
+  }, [settings, acpProviders]);
 
   const handleAgentTypeChange = (key: React.Key | null) => {
     if (!key) return;

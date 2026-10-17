@@ -12,11 +12,9 @@ from fastapi import Request
 from pydantic import Field, SecretStr, TypeAdapter
 
 from openhands.agent_server.models import (
-    ACPConversationInfo,
     ConversationInfo,
     NeverConfirm,
     SendMessageRequest,
-    StartACPConversationRequest,
     StartConversationRequest,
 )
 from openhands.app_server.app_conversation.acp_session_snapshot_service import (
@@ -75,7 +73,6 @@ from openhands.sdk.security.confirmation_policy import (
 from openhands.tools.preset.default import get_default_agent
 
 _conversation_info_type_adapter = TypeAdapter(list[ConversationInfo | None])
-_acp_conversation_info_type_adapter = TypeAdapter(list[ACPConversationInfo | None])
 _logger = logging.getLogger(__name__)
 GIT_TOKEN = 'GIT_TOKEN'
 
@@ -243,8 +240,8 @@ class LiveStatusAppConversationService(GitAppConversationService):
                 timeout=self.sandbox_startup_timeout,
             )
             response.raise_for_status()
-            if is_acp:
-                info = ACPConversationInfo.model_validate(response.json())
+            info = ConversationInfo.model_validate(response.json())
+            if isinstance(start_conversation_request.agent, ACPAgent):
                 agent_kind = 'acp'
                 display_model = start_conversation_request.agent.acp_model
             else:
@@ -291,13 +288,6 @@ class LiveStatusAppConversationService(GitAppConversationService):
             app_conversation_infos
         )
 
-        # Build a mapping from conversation id -> agent_kind for routing
-        conversation_kind_by_id: dict[str, str] = {
-            str(info.id): info.agent_kind
-            for info in app_conversation_infos
-            if info is not None
-        }
-
         # Get referenced sandboxes in a single batch operation...
         sandboxes = await self.sandbox_service.batch_get_sandboxes(
             list(sandbox_id_to_conversation_ids)
@@ -308,8 +298,7 @@ class LiveStatusAppConversationService(GitAppConversationService):
         tasks = [
             self._get_live_conversation_info(
                 sandbox,
-                sandbox_id_to_conversation_ids.get(sandbox.id),
-                conversation_kind_by_id,
+                sandbox_id_to_conversation_ids.get(sandbox.id, []),
             )
             for sandbox in sandboxes
             if sandbox and sandbox.status == SandboxStatus.RUNNING
@@ -446,10 +435,7 @@ class LiveStatusAppConversationService(GitAppConversationService):
                 None,
             )
             if conversation_url:
-                router_path = _agent_kind_to_router_path(
-                    app_conversation_info.agent_kind
-                )
-                conversation_url += f'/api/{router_path}/{app_conversation_info.id.hex}'
+                conversation_url += f'/api/conversations/{app_conversation_info.id.hex}'
             session_api_key = sandbox.session_api_key
 
         return AppConversation(

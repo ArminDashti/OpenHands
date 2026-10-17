@@ -125,14 +125,10 @@ describe("AgentSettingsScreen — minimal generic ACP UX", () => {
       expect(saveSpy).toHaveBeenCalledTimes(1);
     });
 
-    expect(saveSpy.mock.calls[0][0]).toMatchObject({
-      agent_settings_diff: {
-        agent_kind: "openhands",
-        acp_command: null,
-        acp_args: null,
-        acp_env: null,
-        acp_model: null,
-      },
+    // The diff carries only ``agent_kind`` — the backend's
+    // ``saved_agent_configs`` restore wipes ACP-only fields when switching.
+    expect(saveSpy.mock.calls[0][0]).toEqual({
+      agent_settings_diff: { agent_kind: "openhands" },
     });
   });
 });

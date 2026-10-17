@@ -1,6 +1,6 @@
 """Tests for ACP agent discrimination in webhook_router.
 
-Verifies that ACPConversationInfo with an ACPAgent payload is correctly
+Verifies that ConversationInfo with an ACPAgent payload is correctly
 discriminated from ConversationInfo with a regular Agent, and that
 display_name / llm_model are populated accordingly.
 """
@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from openhands.agent_server.models import ACPConversationInfo, ConversationInfo, Success
+from openhands.agent_server.models import ConversationInfo, Success
 from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationInfo,
 )
@@ -83,8 +83,8 @@ def _make_llm_conversation_info() -> ConversationInfo:
     return info
 
 
-def _make_acp_conversation_info(acp_command: list[str]) -> ACPConversationInfo:
-    info = MagicMock(spec=ACPConversationInfo)
+def _make_acp_conversation_info(acp_command: list[str]) -> ConversationInfo:
+    info = MagicMock(spec=ConversationInfo)
     info.id = uuid4()
     info.execution_status = ConversationExecutionStatus.RUNNING
     acp_agent = MagicMock(spec=ACPAgent)
@@ -102,7 +102,7 @@ def _make_acp_conversation_info(acp_command: list[str]) -> ACPConversationInfo:
 
 
 def test_acp_agent_isinstance_check_is_true_for_acp_agent():
-    """ACPAgent payload in ACPConversationInfo satisfies isinstance check."""
+    """ACPAgent payload in ConversationInfo satisfies isinstance check."""
     acp_agent = MagicMock(spec=ACPAgent)
     assert isinstance(acp_agent, ACPAgent)
 
@@ -182,7 +182,9 @@ async def test_acp_conversation_stores_display_name(
     saved = await service.get_app_conversation_info(conversation_id)
     assert saved is not None
     assert saved.llm_model is None
-    assert saved.display_name == 'ACP: claude-agent-acp'
+    # ``acp_display_name`` now resolves the SDK registry, so a known preset
+    # command surfaces as its brand name rather than the raw package basename.
+    assert saved.display_name == 'Claude Code'
     assert saved.agent_kind == 'acp'
 
 
