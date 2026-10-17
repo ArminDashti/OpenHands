@@ -21,7 +21,6 @@ interface ModalBodyProps {
   testID?: string;
   children: React.ReactNode;
   className?: React.HTMLProps<HTMLDivElement>["className"];
-  width?: ModalWidth;
 }
 
 export function ModalBody({

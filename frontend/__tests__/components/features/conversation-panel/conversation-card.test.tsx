@@ -8,6 +8,7 @@ describe("ConversationCard", () => {
   const onClick = vi.fn();
   const onDelete = vi.fn();
   const onChangeTitle = vi.fn();
+  const onDownloadWorkspace = vi.fn();
 
   afterEach(() => {
     vi.clearAllMocks();

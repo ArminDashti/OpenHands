@@ -5,6 +5,7 @@ import { useNavigation } from "#/context/navigation-context";
 import { I18nKey } from "#/i18n/declaration";
 import { DangerModal } from "../confirmation-modals/danger-modal";
 import { extractSettings } from "#/utils/settings-utils";
+import { useEndSession } from "#/hooks/use-end-session";
 import { ModalBackdrop } from "../modal-backdrop";
 import { ModelSelector } from "./model-selector";
 import { BrandButton } from "#/components/features/settings/brand-button";
@@ -30,11 +31,18 @@ export function SettingsForm({ settings, onClose }: SettingsFormProps) {
   const [confirmEndSessionModalOpen, setConfirmEndSessionModalOpen] =
     React.useState(false);
 
+  const resetOngoingSession = () => {
+    if (location.pathname.startsWith("/conversations/")) {
+      endSession();
+    }
+  };
+
   const handleFormSubmission = async (formData: FormData) => {
     const newSettings = extractSettings(formData);
     saveUserSettings(newSettings, {
       onSuccess: () => {
         onClose();
+        resetOngoingSession();
 
         const agentLlm =
           ((newSettings.agent_settings_diff as Record<string, unknown>)
@@ -89,7 +97,7 @@ export function SettingsForm({ settings, onClose }: SettingsFormProps) {
           <SettingsInput
             testId="llm-api-key-input"
             name="llm-api-key-input"
-            label={t(I18nKey.SETTINGS_FORM$API_KEY)}
+            label="API Key"
             type="password"
             className="w-full"
             // eslint-disable-next-line i18next/no-literal-string -- masked-key sentinel, not translatable

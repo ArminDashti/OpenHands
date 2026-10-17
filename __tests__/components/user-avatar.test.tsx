@@ -14,7 +14,7 @@ describe("UserAvatar", () => {
   it("should display the user's avatar when available", () => {
     render(<UserAvatar avatarUrl="https://example.com/avatar.png" />);
 
-    expect(screen.getByAltText("AVATAR$ALT_TEXT")).toBeInTheDocument();
+    expect(screen.getByAltText("user avatar")).toBeInTheDocument();
     expect(
       screen.queryByLabelText("USER$AVATAR_PLACEHOLDER"),
     ).not.toBeInTheDocument();
@@ -37,6 +37,6 @@ describe("UserAvatar", () => {
       <UserAvatar avatarUrl="https://example.com/avatar.png" isLoading />,
     );
     expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
-    expect(screen.queryByAltText("AVATAR$ALT_TEXT")).not.toBeInTheDocument();
+    expect(screen.queryByAltText("user avatar")).not.toBeInTheDocument();
   });
 });

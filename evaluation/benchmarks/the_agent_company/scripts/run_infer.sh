@@ -88,7 +88,7 @@ while IFS= read -r task_image; do
     # Remove suffix using % to remove shortest matching pattern from end
     task_name=${task_name%-image:*}
     echo "Use task image $task_image, task name $task_name..."
-
+    ((cnt+=1))
     # Check if evaluation file exists
     if [ -f "$OUTPUTS_PATH/eval_${task_name}-image.json" ]; then
         echo "Skipping $task_name - evaluation file already exists"

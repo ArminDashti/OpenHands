@@ -7,6 +7,15 @@ export function ConversationRepoLink({
   repo,
   onClick,
 }: ConversationRepoLinkProps) {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    window.open(
+      `https://github.com/${selectedRepository}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   return (
     <a
       data-testid="conversation-card-repo"

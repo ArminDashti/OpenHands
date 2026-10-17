@@ -37,7 +37,7 @@ def get_config(
 ) -> AppConfig:
     config = AppConfig(
         run_as_openhands=False,
-        max_budget_per_task=4,
+        max_budget_per_task=10,
         max_iterations=100,
         trajectories_path=os.path.join(
             mount_path_on_host, f'traj_{task_short_name}.json'
@@ -93,26 +93,28 @@ def init_task_env(runtime: Runtime, hostname: str, env_llm_config: LLMConfig):
     assert obs.exit_code == 0
 
 
+# TODO
 def codeact_user_response(state: State) -> str:
     msg = (
         'Please continue working on the task on whatever approach you think is suitable.\n'
-        'If you think you have solved the task, please finish the interaction.\n'
+        'If you think you have solved the task, please use the finish tool to end the interaction.\n'
         'IMPORTANT: YOU SHOULD NEVER ASK FOR HUMAN HELP.\n'
     )
 
-    if state.history:
-        # check if the agent has tried to talk to the user 3 times, if so, let the agent know it can give up
-        user_msgs = [
-            event
-            for event in state.history
-            if isinstance(event, MessageAction) and event.source == 'user'
-        ]
-        if len(user_msgs) >= 2:
-            # let the agent know that it can give up when it has tried 3 times
-            return (
-                msg
-                + 'If you want to give up, run: <execute_bash> exit </execute_bash>.\n'
-            )
+    # Planner will add user messages to event stream, so we shouldn't encourage agent to exit!
+    # if state.history:
+    #     # check if the agent has tried to talk to the user 3 times, if so, let the agent know it can give up
+    #     user_msgs = [
+    #         event
+    #         for event in state.history
+    #         if isinstance(event, MessageAction) and event.source == 'user'
+    #     ]
+    #     if len(user_msgs) >= 2:
+    #         # let the agent know that it can give up when it has tried 3 times
+    #         return (
+    #             msg
+    #             + 'If you want to give up, run: <execute_bash> exit </execute_bash>.\n'
+    #         )
     return msg
 
 
@@ -126,10 +128,18 @@ def run_solver(
     save_screenshots: bool,
     screenshots_dir: str,
 ) -> State:
-    instruction = 'Complete the task in /instruction/task.md'
-
+    instruction = """Complete the following task: """
+    cmd_action = CmdRunAction(command='cat /instruction/task.md')
+    obs = runtime.run_action(cmd_action)
+    task_description: str = obs.content
+    instruction += task_description
+    instruction += '\n\nIMPORTANT: If there are the-agent-company.com websites mentioned in the task description, NOTE that these websites are privately hosted.\n'
+    instruction += (
+        'IMPORTANT: If you want to close pop-ups, please press the escape key.\n'
+    )
+    instruction += 'IMPORTANT: You should NEVER ask for Human Help.\n'
     if 'gitlab' in dependencies:
-        instruction += "\n\nGitlab username is 'root' and password is 'theagentcompany'"
+        instruction += "IMPORTANT: You are already signed in to Gitlab, but here are the sign-in credentials for your reference - Gitlab username is 'root' and password is 'theagentcompany'"
 
     state: State | None = asyncio.run(
         run_controller(
@@ -164,6 +174,12 @@ def run_solver(
 def run_evaluator(
     runtime: Runtime, env_llm_config: LLMConfig, trajectory_path: str, result_path: str
 ):
+    # HACK: this allows us to use the anthropic API for evaluator LLM.
+    if 'sde-add-wiki-page' in trajectory_path:
+        command = 'python_default -m pip install -U litellm'
+        action = CmdRunAction(command=command)
+        obs = runtime.run_action(action)
+        logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     command = (
         f'LITELLM_API_KEY={env_llm_config.api_key} '
         f'LITELLM_BASE_URL={env_llm_config.base_url} '

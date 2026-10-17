@@ -45,6 +45,7 @@ export const useHandleWSEvents = () => {
     if (isServerError(event)) {
       if (event.error_code === 401) {
         displayErrorToast("Session expired.");
+        endSession();
         return;
       }
 

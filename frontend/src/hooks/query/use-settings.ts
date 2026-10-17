@@ -35,7 +35,7 @@ const getSettingsQueryFn = async () => {
 
 export const useSettings = () => {
   const query = useQuery({
-    queryKey: ["settings"],
+    queryKey: ["settings", githubTokenIsSet],
     queryFn: getSettingsQueryFn,
     initialData: DEFAULT_SETTINGS,
   });

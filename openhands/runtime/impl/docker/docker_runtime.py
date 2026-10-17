@@ -208,6 +208,8 @@ class DockerRuntime(ActionExecutionClient):
         }
         if self.config.debug or DEBUG:
             environment['DEBUG'] = 'true'
+        # also update with runtime_startup_env_vars
+        environment.update(self.config.sandbox.runtime_startup_env_vars)
 
         if self.vscode_enabled:
             # vscode is on port +1 from container port
