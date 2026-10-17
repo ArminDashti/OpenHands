@@ -19,6 +19,7 @@ interface ChatInputContainerProps {
   placeholder?: string;
   buttonClassName: string;
   chatInputRef: React.RefObject<HTMLDivElement | null>;
+  placeholder?: string;
   handleFileIconClick: (isDisabled: boolean) => void;
   handleSubmit: () => void;
   onDragOver: (e: React.DragEvent, isDisabled: boolean) => void;
@@ -48,6 +49,7 @@ export function ChatInputContainer({
   placeholder,
   buttonClassName,
   chatInputRef,
+  placeholder,
   handleFileIconClick,
   handleSubmit,
   onDragOver,
@@ -97,6 +99,7 @@ export function ChatInputContainer({
 
         <ChatInputRow
           chatInputRef={chatInputRef}
+          placeholder={placeholder}
           isNewConversationPending={isNewConversationPending}
           placeholder={placeholder}
           onInput={onInput}

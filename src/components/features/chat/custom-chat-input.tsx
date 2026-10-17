@@ -213,6 +213,7 @@ export function CustomChatInput({
           placeholder={placeholder}
           buttonClassName={buttonClassName}
           chatInputRef={chatInputRef}
+          placeholder={placeholder}
           handleFileIconClick={handleFileIconClick}
           handleSubmit={handleSubmitAndSync}
           onDragOver={handleDragOver}

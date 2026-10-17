@@ -31,12 +31,17 @@ import {
   writeStoredLocalWorkspaceMode,
 } from "#/utils/workspace-mode";
 import type { PluginSpec } from "#/api/conversation-service/agent-server-conversation-service.types";
+import { setAutomationSetupDraft } from "#/api/automation-setup-draft-store";
 import { PluginPickerModal } from "#/components/features/plugins/plugin-picker-modal";
 import { PluginPickerTrigger } from "#/components/features/plugins/plugin-picker-trigger";
 import { RecommendedAutomationsLauncher } from "#/components/features/automations/recommended-automations-launcher";
 import { PinnedAutomationsDashboard } from "./featured-automations/pinned-automations-dashboard";
 import { RunningAutomationsList } from "./featured-automations/running-automations-list";
 import { HomeHeaderTitle } from "./home-header/home-header-title";
+import {
+  HomeLauncherModeToggle,
+  type HomeLauncherMode,
+} from "./home-launcher-mode-toggle";
 import { OpenLauncherButton } from "./open-launcher-button";
 import { OpenWorkspaceDialog } from "./open-workspace-dialog";
 import { OpenRepositoryDialog } from "./open-repository-dialog";
@@ -60,6 +65,8 @@ export function HomeChatLauncher() {
   );
   const [selectedPlugins, setSelectedPlugins] = useState<PluginSpec[]>([]);
   const [isPluginPickerOpen, setIsPluginPickerOpen] = useState(false);
+  const [launcherMode, setLauncherMode] = useState<HomeLauncherMode>("code");
+  const isAutomateMode = launcherMode === "automate";
 
   const { mutateAsync: createConversation, isPending } =
     useCreateConversation();
@@ -112,6 +119,7 @@ export function HomeChatLauncher() {
     // query here would create a duplicate text-only initial_message.
     let variables: Parameters<typeof createConversation>[0] = {
       query: hasAttachments ? undefined : trimmed || undefined,
+      automationSetup: isAutomateMode,
       entryPoint: "home_chat_launcher",
     };
     if (isLocal && pendingWorkspace) {
@@ -137,6 +145,15 @@ export function HomeChatLauncher() {
     if (selectedPlugins.length > 0) {
       variables = { ...variables, plugins: selectedPlugins };
     }
+
+    const seedAutomationSetupDraft = (conversationId: string) => {
+      if (!isAutomateMode || !trimmed) return;
+      setAutomationSetupDraft(conversationId, {
+        prompt: trimmed,
+        kind: selectedPlugins.length > 0 ? "plugin" : "prompt",
+        plugins: selectedPlugins.map((plugin) => plugin.source),
+      });
+    };
 
     // Loading toast gives the user a clear signal that the request is in
     // flight; dismissed precisely once the mutation resolves.
@@ -187,6 +204,7 @@ export function HomeChatLauncher() {
               images: attachmentSnapshot.images,
               imagesMarkedUploadAsFile,
             });
+            seedAutomationSetupDraft(targetConversationId);
             navigate(`/conversations/${targetConversationId}`);
             return;
           } else {
@@ -216,6 +234,7 @@ export function HomeChatLauncher() {
           });
         }
 
+        seedAutomationSetupDraft(targetConversationId);
         navigate(`/conversations/${targetConversationId}`);
       } catch (error) {
         toast.dismiss(toastId);
@@ -240,12 +259,24 @@ export function HomeChatLauncher() {
           <HomeHeaderTitle />
         </div>
 
+        <div className="flex w-full justify-center">
+          <HomeLauncherModeToggle
+            mode={launcherMode}
+            onChange={setLauncherMode}
+          />
+        </div>
+
         <div className="w-full">
           <CustomChatInput
             onSubmit={handleSubmitWithModelGuard}
             onFilesPaste={handleUpload}
             placeholder={t(I18nKey.HOME$DESCRIBE_ENGINEERING_TASK)}
             disabled={isCreating || llmBlocked}
+            placeholder={
+              isAutomateMode
+                ? t(I18nKey.HOME$AUTOMATE_PROMPT_PLACEHOLDER)
+                : t(I18nKey.SUGGESTIONS$WHAT_TO_BUILD)
+            }
           />
         </div>
 

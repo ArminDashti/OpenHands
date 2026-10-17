@@ -7,6 +7,7 @@ import { cn } from "#/utils/utils";
 
 interface ChatInputFieldProps {
   chatInputRef: React.RefObject<HTMLDivElement | null>;
+  placeholder?: string;
   disabled?: boolean;
   /**
    * Overrides the default "what to build" placeholder. Surfaces that launch a
@@ -23,6 +24,7 @@ interface ChatInputFieldProps {
 
 export function ChatInputField({
   chatInputRef,
+  placeholder,
   disabled = false,
   placeholder,
   onInput,
@@ -37,7 +39,10 @@ export function ChatInputField({
     (state) => state.conversationMode,
   );
 
-  const isPlanMode = conversationMode === "plan";
+  const defaultPlaceholder =
+    conversationMode === "plan"
+      ? t(I18nKey.COMMON$LET_S_WORK_ON_A_PLAN)
+      : t(I18nKey.SUGGESTIONS$WHAT_TO_BUILD);
 
   React.useEffect(() => {
     if (!disabled) {
