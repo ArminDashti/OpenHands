@@ -16,6 +16,7 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
+from queue import Queue
 from zipfile import ZipFile
 
 from binaryornot.check import is_binary
