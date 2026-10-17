@@ -29,6 +29,7 @@ from openhands.core.config import (
 from openhands.core.config.llm_config import LLMConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.main import create_runtime
+from openhands.runtime.base import Runtime
 from openhands.events.action import CmdRunAction
 from openhands.events.observation import CmdOutputObservation
 
@@ -93,7 +94,7 @@ def get_config(metadata: EvalMetadata, instance: pd.Series) -> AppConfig:
     return config
 
 
-def process_instance(
+async def process_instance(
     instance: pd.Series,
     metadata: EvalMetadata | None = None,
     reset_logger: bool = True,
@@ -189,8 +190,8 @@ def process_instance(
             action.timeout = 60  # Short timeout just to get the process ID
             obs = runtime.run_action(action)
 
-            if isinstance(obs, CmdOutputObservation) and obs.exit_code == 0:
-                pid = obs.content.split()[-1].strip()
+            if isinstance(eval_obs, CmdOutputObservation) and eval_obs.exit_code == 0:
+                pid = eval_obs.content.split()[-1].strip()
                 logger.info(
                     f'[{instance_id}] Evaluation process started with PID: {pid}'
                 )
@@ -222,7 +223,7 @@ def process_instance(
                     logger.info(
                         f'[{instance_id}] [{seconds_elapsed:.0f}s] Evaluation still running, waiting...'
                     )
-                    time.sleep(30)  # Wait for 30 seconds before checking again
+                    await asyncio.sleep(30)  # Wait for 30 seconds before checking again
 
                 # Read the log file
                 cat_action = CmdRunAction(command=f'cat {log_file}', keep_prompt=False)
@@ -264,7 +265,7 @@ def process_instance(
                             'resolved'
                         ]
             else:
-                logger.info(f'[{instance_id}] Error when starting eval:\n{obs.content}')
+                logger.info(f'[{instance_id}] Error when starting eval:\n{eval_obs.content}')
                 instance['test_result']['report']['error_eval'] = True
 
             return EvalOutput(
@@ -281,7 +282,10 @@ def process_instance(
                 logger,
             )
     finally:
-        runtime.close()
+        try:
+            await runtime.close()
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':
