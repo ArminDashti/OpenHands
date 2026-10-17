@@ -60,11 +60,9 @@ requires = [
 ]
 
 [tool.autopep8]
-# autopep8 fights with mypy on line length issue
 ignore = [ "E501" ]
 
 [tool.black]
-# prevent black (if installed) from changing single quotes to double quotes
 skip-string-normalization = true
 
 [tool.ruff.lint]

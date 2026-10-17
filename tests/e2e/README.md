@@ -7,7 +7,7 @@ This directory contains end-to-end tests for the OpenHands application. These te
 ### Prerequisites
 
 - Python 3.12 or later
-- Poetry
+- uv
 - Node.js
 - Playwright
 

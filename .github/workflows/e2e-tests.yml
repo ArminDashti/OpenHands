@@ -30,7 +30,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'poetry'
 
       - name: Install system dependencies
         run: |
@@ -69,9 +68,8 @@ jobs:
           ENABLE_BROWSER: true
           INSTALL_PLAYWRIGHT: 1
         run: |
-          # Fix poetry.lock file if needed
-          echo "Fixing poetry.lock file if needed..."
-          poetry lock
+          # Using uv; no lockfile fix needed
+          uv lock
 
           # Build OpenHands using make build
           echo "Running make build..."
@@ -79,11 +77,11 @@ jobs:
 
           # Install Chromium Headless Shell for Playwright (needed for pytest-playwright)
           echo "Installing Chromium Headless Shell for Playwright..."
-          poetry run playwright install chromium-headless-shell
+          uv run playwright install chromium-headless-shell
 
           # Verify Playwright browsers are installed (for e2e tests only)
           echo "Verifying Playwright browsers installation for e2e tests..."
-          BROWSER_CHECK=$(poetry run python tests/e2e/check_playwright.py 2>/dev/null)
+          BROWSER_CHECK=$(uv run python tests/e2e/check_playwright.py 2>/dev/null)
 
           if [ "$BROWSER_CHECK" != "chromium_found" ]; then
             echo "ERROR: Chromium browser not found or not working for e2e tests"
