@@ -24,6 +24,18 @@ class AppConversationAlreadyExists(Exception):
     pass
 
 
+class ConversationExportAlreadyRunning(Exception):
+    """Raised when another worker is already exporting the same conversation."""
+
+
+class ConversationExportLockUnavailable(Exception):
+    """Raised when the export lock cannot be checked."""
+
+
+class ConversationExportTooLarge(Exception):
+    """Raised when a conversation exceeds the configured export event limit."""
+
+
 class AppConversationService(ABC):
     """Service for managing conversations running in sandboxes."""
 

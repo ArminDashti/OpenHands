@@ -62,7 +62,7 @@ def service(async_session) -> SQLAppConversationInfoService:
 
 
 @pytest.fixture
-def sandbox_info():
+def sandbox_record():
     sandbox = MagicMock()
     sandbox.id = 'sandbox_acp_test'
     sandbox.created_by_user_id = 'user_123'
@@ -127,8 +127,8 @@ async def test_llm_conversation_stores_llm_model(async_session, service, sandbox
     existing = AppConversationInfo(
         id=conversation_id,
         title='Test',
-        sandbox_id=sandbox_info.id,
-        created_by_user_id=sandbox_info.created_by_user_id,
+        sandbox_id=sandbox_record.id,
+        created_by_user_id=sandbox_record.created_by_user_id,
     )
 
     with patch(
@@ -137,7 +137,7 @@ async def test_llm_conversation_stores_llm_model(async_session, service, sandbox
     ):
         result = await on_conversation_update(
             conversation_info=llm_info,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=service,
         )
 
@@ -163,8 +163,8 @@ async def test_acp_conversation_stores_display_name(
     existing = AppConversationInfo(
         id=conversation_id,
         title='Test',
-        sandbox_id=sandbox_info.id,
-        created_by_user_id=sandbox_info.created_by_user_id,
+        sandbox_id=sandbox_record.id,
+        created_by_user_id=sandbox_record.created_by_user_id,
     )
 
     with patch(
@@ -173,7 +173,7 @@ async def test_acp_conversation_stores_display_name(
     ):
         result = await on_conversation_update(
             conversation_info=acp_info,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=service,
         )
 
@@ -209,7 +209,7 @@ async def test_acp_conversation_empty_command_display_name(
     ):
         await on_conversation_update(
             conversation_info=acp_info,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=service,
         )
 

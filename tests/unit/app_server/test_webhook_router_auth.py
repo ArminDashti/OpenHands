@@ -34,7 +34,7 @@ class TestValidSandbox:
         )
 
         mock_sandbox_service = AsyncMock()
-        mock_sandbox_service.get_sandbox_by_session_api_key = AsyncMock(
+        mock_sandbox_service.get_sandbox_record_by_session_api_key = AsyncMock(
             return_value=expected_sandbox
         )
 
@@ -47,7 +47,7 @@ class TestValidSandbox:
 
         # Assert
         assert result == expected_sandbox
-        mock_sandbox_service.get_sandbox_by_session_api_key.assert_called_once_with(
+        mock_sandbox_service.get_sandbox_record_by_session_api_key.assert_called_once_with(
             session_api_key
         )
 
@@ -74,7 +74,7 @@ class TestValidSandbox:
         # Arrange
         session_api_key = 'invalid-api-key'
         mock_sandbox_service = AsyncMock()
-        mock_sandbox_service.get_sandbox_by_session_api_key = AsyncMock(
+        mock_sandbox_service.get_sandbox_record_by_session_api_key = AsyncMock(
             return_value=None
         )
 
@@ -107,7 +107,7 @@ class TestValidSandbox:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert 'X-Session-API-Key header is required' in exc_info.value.detail
         # Verify the sandbox service was NOT called (rejected before lookup)
-        mock_sandbox_service.get_sandbox_by_session_api_key.assert_not_called()
+        mock_sandbox_service.get_sandbox_record_by_session_api_key.assert_not_called()
 
 
 class TestValidConversation:
@@ -118,12 +118,9 @@ class TestValidConversation:
         """Test that existing conversation returns info."""
         # Arrange
         conversation_id = uuid4()
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key='api-key',
             created_by_user_id='user-123',
-            sandbox_spec_id='spec-123',
         )
 
         expected_info = MagicMock()
@@ -135,7 +132,7 @@ class TestValidConversation:
         # Act
         result = await valid_conversation(
             conversation_id=conversation_id,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=mock_service,
         )
 
@@ -147,12 +144,9 @@ class TestValidConversation:
         """Test that non-existing conversation creates a stub."""
         # Arrange
         conversation_id = uuid4()
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key='api-key',
             created_by_user_id='user-123',
-            sandbox_spec_id='spec-123',
         )
 
         mock_service = AsyncMock()
@@ -161,26 +155,23 @@ class TestValidConversation:
         # Act
         result = await valid_conversation(
             conversation_id=conversation_id,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=mock_service,
         )
 
         # Assert
         assert result.id == conversation_id
-        assert result.sandbox_id == sandbox_info.id
-        assert result.created_by_user_id == sandbox_info.created_by_user_id
+        assert result.sandbox_id == sandbox_record.id
+        assert result.created_by_user_id == sandbox_record.created_by_user_id
 
     @pytest.mark.asyncio
     async def test_valid_conversation_different_user_raises_auth_error(self):
         """Test that conversation from different user raises AuthError."""
         # Arrange
         conversation_id = uuid4()
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key='api-key',
             created_by_user_id='user-123',
-            sandbox_spec_id='spec-123',
         )
 
         # Conversation created by different user
@@ -198,7 +189,7 @@ class TestValidConversation:
         with pytest.raises(AuthError):
             await valid_conversation(
                 conversation_id=conversation_id,
-                sandbox_info=sandbox_info,
+                sandbox_record=sandbox_record,
                 app_conversation_info_service=mock_service,
             )
 
@@ -208,12 +199,9 @@ class TestValidConversation:
         # Arrange
         conversation_id = uuid4()
         user_id = 'user-123'
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key='api-key',
             created_by_user_id=user_id,
-            sandbox_spec_id='spec-123',
         )
 
         # Conversation created by same user
@@ -226,7 +214,7 @@ class TestValidConversation:
         # Act
         result = await valid_conversation(
             conversation_id=conversation_id,
-            sandbox_info=sandbox_info,
+            sandbox_record=sandbox_record,
             app_conversation_info_service=mock_service,
         )
 
@@ -242,17 +230,14 @@ class TestWebhookAuthenticationIntegration:
         """Test complete auth flow with valid API key."""
         # Arrange
         session_api_key = 'valid-api-key'
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key=session_api_key,
             created_by_user_id='user-123',
-            sandbox_spec_id='spec-123',
         )
 
         mock_sandbox_service = AsyncMock()
-        mock_sandbox_service.get_sandbox_by_session_api_key = AsyncMock(
-            return_value=sandbox_info
+        mock_sandbox_service.get_sandbox_record_by_session_api_key = AsyncMock(
+            return_value=sandbox_record
         )
 
         conversation_info = MagicMock()
@@ -273,7 +258,7 @@ class TestWebhookAuthenticationIntegration:
         # Then call valid_conversation
         conversation_result = await valid_conversation(
             conversation_id=uuid4(),
-            sandbox_info=sandbox_result,
+            sandbox_record=sandbox_result,
             app_conversation_info_service=mock_conversation_service,
         )
 
@@ -287,7 +272,7 @@ class TestWebhookAuthenticationIntegration:
         # Arrange
         session_api_key = 'invalid-api-key'
         mock_sandbox_service = AsyncMock()
-        mock_sandbox_service.get_sandbox_by_session_api_key = AsyncMock(
+        mock_sandbox_service.get_sandbox_record_by_session_api_key = AsyncMock(
             return_value=None
         )
 
@@ -306,17 +291,14 @@ class TestWebhookAuthenticationIntegration:
         """Test complete auth flow with valid key but wrong user fails."""
         # Arrange
         session_api_key = 'valid-api-key'
-        sandbox_info = SandboxInfo(
+        sandbox_record = SandboxRecord(
             id='sandbox-123',
-            status=SandboxStatus.RUNNING,
-            session_api_key=session_api_key,
             created_by_user_id='user-123',
-            sandbox_spec_id='spec-123',
         )
 
         mock_sandbox_service = AsyncMock()
-        mock_sandbox_service.get_sandbox_by_session_api_key = AsyncMock(
-            return_value=sandbox_info
+        mock_sandbox_service.get_sandbox_record_by_session_api_key = AsyncMock(
+            return_value=sandbox_record
         )
 
         # Conversation created by different user
@@ -341,6 +323,6 @@ class TestWebhookAuthenticationIntegration:
         with pytest.raises(AuthError):
             await valid_conversation(
                 conversation_id=uuid4(),
-                sandbox_info=sandbox_result,
+                sandbox_record=sandbox_result,
                 app_conversation_info_service=mock_conversation_service,
             )
