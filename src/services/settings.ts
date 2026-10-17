@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   search_api_key: "",
   is_new_user: true,
   disabled_skills: [],
+  disabled_agents: [],
   mcp_config: {},
   max_budget_per_task: null,
   email: "",

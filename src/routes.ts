@@ -22,6 +22,7 @@ export default [
     route("apps", "routes/canvas-extensions.tsx"),
     route("extensions/:extensionName/*", "routes/canvas-extension-page.tsx"),
     route("mcp", "routes/mcp.tsx"),
+    route("sub-agents", "routes/agents-settings.tsx"),
     route("settings", "routes/settings.tsx", [
       index("routes/settings-index.tsx"),
       route("llm", "routes/llm-settings.tsx"),
