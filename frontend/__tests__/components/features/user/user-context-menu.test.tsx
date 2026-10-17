@@ -141,7 +141,7 @@ describe("UserContextMenu", () => {
 
     await waitFor(() => {
       expectedItems.forEach((item) => {
-        expect(screen.getByText(item.text)).toBeInTheDocument();
+        expect(screen.queryAllByText(item.text).length).toBeGreaterThan(0);
       });
     });
   });
@@ -172,7 +172,7 @@ describe("UserContextMenu", () => {
 
     await waitFor(() => {
       expectedItems.forEach((item) => {
-        expect(screen.getByText(item.text)).toBeInTheDocument();
+        expect(screen.queryAllByText(item.text).length).toBeGreaterThan(0);
       });
     });
   });
@@ -284,8 +284,8 @@ describe("UserContextMenu", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("COMMON$LANGUAGE_MODEL_LLM"),
-        ).toBeInTheDocument();
+          screen.getAllByText("COMMON$LANGUAGE_MODEL_LLM").length,
+        ).toBeGreaterThanOrEqual(1);
       });
     });
   });

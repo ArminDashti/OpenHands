@@ -36,3 +36,18 @@ def get_org_agent_settings(org: Org) -> dict[str, Any]:
 
 def get_org_member_agent_settings(org_member: OrgMember) -> dict[str, Any]:
     return ensure_schema_version(dict(getattr(org_member, 'agent_settings', {}) or {}))
+
+
+def compute_agent_settings_overrides(
+    base: Mapping[str, Any] | None,
+    effective: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    base_settings = ensure_schema_version(base)
+    effective_settings = ensure_schema_version(effective)
+
+    overrides = {
+        key: value
+        for key, value in effective_settings.items()
+        if key != 'schema_version' and base_settings.get(key) != value
+    }
+    return ensure_schema_version(overrides)

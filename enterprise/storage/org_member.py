@@ -16,6 +16,7 @@ class OrgMember(Base):  # type: ignore
     user_id = Column(UUID(as_uuid=True), ForeignKey('user.id'), primary_key=True)
     role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
     _llm_api_key = Column(String, nullable=False)
+    has_custom_llm_api_key = Column(Boolean, nullable=False, default=False)
     agent_settings = Column(JSON, nullable=False, default=dict)
     status = Column(String, nullable=True)
 

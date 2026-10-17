@@ -9,6 +9,8 @@ with patch('storage.database.engine'), patch('storage.database.a_engine'):
     from storage.role import Role
     from storage.user import User
 
+from openhands.storage.data_models.settings import Settings
+
 
 def test_get_org_members(session_maker):
     # Test getting org_members by org ID

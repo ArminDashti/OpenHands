@@ -4,11 +4,13 @@ import { BrandButton } from "#/components/features/settings/brand-button";
 import { LlmSettingsInputsSkeleton } from "#/components/features/settings/llm-settings/llm-settings-inputs-skeleton";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { usePermission } from "#/hooks/organizations/use-permissions";
+import { useAgentSettingsSchema } from "#/hooks/query/use-agent-settings-schema";
 import { useConfig } from "#/hooks/query/use-config";
 import { useMe } from "#/hooks/query/use-me";
 import { useSettings } from "#/hooks/query/use-settings";
 import { I18nKey } from "#/i18n/declaration";
 import { Typography } from "#/ui/typography";
+import { Settings, SettingsSchema, SettingsScope } from "#/types/settings";
 import {
   displayErrorToast,
   displaySuccessToast,
@@ -26,62 +28,12 @@ import {
   type SettingsView,
 } from "#/utils/sdk-settings-schema";
 import { SchemaField } from "./schema-field";
-
-// ---------------------------------------------------------------------------
-// View tier toggle
-// ---------------------------------------------------------------------------
-function ViewToggle({
-  view,
-  setView,
-  showAdvanced,
-  showAll,
-}: {
-  view: SettingsView;
-  setView: (v: SettingsView) => void;
-  showAdvanced: boolean;
-  showAll: boolean;
-}) {
-  const { t } = useTranslation();
-
-  if (!showAdvanced && !showAll) return null;
-
-  return (
-    <div className="flex items-center gap-2 mb-6">
-      <BrandButton
-        testId="sdk-section-basic-toggle"
-        variant={view === "basic" ? "primary" : "secondary"}
-        type="button"
-        onClick={() => setView("basic")}
-      >
-        {t(I18nKey.SETTINGS$BASIC)}
-      </BrandButton>
-      {showAdvanced ? (
-        <BrandButton
-          testId="sdk-section-advanced-toggle"
-          variant={view === "advanced" ? "primary" : "secondary"}
-          type="button"
-          onClick={() => setView("advanced")}
-        >
-          {t(I18nKey.SETTINGS$ADVANCED)}
-        </BrandButton>
-      ) : null}
-      {showAll ? (
-        <BrandButton
-          testId="sdk-section-all-toggle"
-          variant={view === "all" ? "primary" : "secondary"}
-          type="button"
-          onClick={() => setView("all")}
-        >
-          {t(I18nKey.SETTINGS$ALL)}
-        </BrandButton>
-      ) : null}
-    </div>
-  );
-}
+import { ViewToggle } from "./view-toggle";
 
 export interface SdkSectionHeaderProps {
   values: SettingsFormValues;
   isDisabled: boolean;
+  view: SettingsView;
   onChange: (key: string, value: string | boolean) => void;
 }
 
@@ -97,49 +49,76 @@ export interface SdkSectionHeaderProps {
 export function SdkSectionPage({
   sectionKeys,
   excludeKeys = new Set<string>(),
+  scope = "personal",
   header,
+  extraDirty = false,
+  buildPayload,
+  onSaveSuccess,
+  getInitialView,
   testId = "sdk-section-settings-screen",
 }: {
   sectionKeys: string[];
   excludeKeys?: Set<string>;
+  scope?: SettingsScope;
+
   header?: (props: SdkSectionHeaderProps) => React.ReactNode;
+  extraDirty?: boolean;
+  buildPayload?: (
+    payload: ReturnType<typeof buildSdkSettingsPayload>,
+    context: {
+      values: SettingsFormValues;
+      dirty: SettingsDirtyState;
+      view: SettingsView;
+    },
+  ) => Record<string, unknown>;
+  onSaveSuccess?: () => void;
+  getInitialView?: (
+    settings: Settings,
+    filteredSchema: SettingsSchema,
+  ) => SettingsView;
   testId?: string;
 }) {
   const { t } = useTranslation();
-  const { mutate: saveSettings, isPending } = useSaveSettings();
-  const { data: settings, isLoading, isFetching } = useSettings();
+  const { mutate: saveSettings, isPending } = useSaveSettings(scope);
+  const { data: settings, isLoading, isFetching } = useSettings(scope);
+  const { data: schema, isLoading: isSchemaLoading } = useAgentSettingsSchema(
+    settings?.agent_settings_schema,
+  );
   const { data: config } = useConfig();
   const { data: me } = useMe();
   const { hasPermission } = usePermission(me?.role ?? "member");
 
   const isOssMode = config?.app_mode === "oss";
-  const isReadOnly = isOssMode ? false : !hasPermission("edit_llm_settings");
+  const isReadOnly =
+    scope === "org" && !isOssMode ? !hasPermission("edit_llm_settings") : false;
 
   const [view, setView] = React.useState<SettingsView>("basic");
   const [values, setValues] = React.useState<SettingsFormValues>({});
   const [dirty, setDirty] = React.useState<SettingsDirtyState>({});
 
-  const fullSchema = settings?.agent_settings_schema ?? null;
-
   // Build a filtered schema containing only the requested sections
   const filteredSchema = React.useMemo(() => {
-    if (!fullSchema) return null;
+    if (!schema) return null;
     const sectionSet = new Set(sectionKeys);
     return {
-      ...fullSchema,
-      sections: fullSchema.sections.filter((s) => sectionSet.has(s.key)),
+      ...schema,
+      sections: schema.sections.filter((s) => sectionSet.has(s.key)),
     };
-  }, [fullSchema, sectionKeys]);
+  }, [schema, sectionKeys]);
 
   const showAdvanced = hasAdvancedSettings(filteredSchema);
   const showAll = hasMinorSettings(filteredSchema);
 
   React.useEffect(() => {
-    if (!settings?.agent_settings_schema) return;
-    setValues(buildInitialSettingsFormValues(settings));
+    if (!settings || !filteredSchema) return;
+    setValues(buildInitialSettingsFormValues(settings, filteredSchema));
     setDirty({});
-    setView(inferInitialView(settings, filteredSchema));
-  }, [settings, filteredSchema]);
+    setView(
+      getInitialView
+        ? getInitialView(settings, filteredSchema)
+        : inferInitialView(settings, filteredSchema),
+    );
+  }, [settings, filteredSchema, getInitialView]);
 
   const visibleSections = React.useMemo(() => {
     if (!filteredSchema) return [];
@@ -168,11 +147,18 @@ export function SdkSectionPage({
   );
 
   const handleSave = () => {
-    if (!fullSchema || isReadOnly) return;
+    if (!filteredSchema || isReadOnly) return;
 
-    let payload: ReturnType<typeof buildSdkSettingsPayload>;
+    let payload: Record<string, unknown>;
     try {
-      payload = buildSdkSettingsPayload(fullSchema, values, dirty);
+      const basePayload = buildSdkSettingsPayload(
+        filteredSchema,
+        values,
+        dirty,
+      );
+      payload = buildPayload
+        ? buildPayload(basePayload, { values, dirty, view })
+        : basePayload;
     } catch (error) {
       displayErrorToast(
         error instanceof Error ? error.message : t(I18nKey.ERROR$GENERIC),
@@ -187,11 +173,14 @@ export function SdkSectionPage({
       onSuccess: () => {
         displaySuccessToast(t(I18nKey.SETTINGS$SAVED_WARNING));
         setDirty({});
+        onSaveSuccess?.();
       },
     });
   };
 
-  if (isLoading || isFetching) return <LlmSettingsInputsSkeleton />;
+  if (isLoading || isFetching || isSchemaLoading) {
+    return <LlmSettingsInputsSkeleton />;
+  }
 
   if (!filteredSchema || filteredSchema.sections.length === 0) {
     return (
@@ -210,12 +199,14 @@ export function SdkSectionPage({
         setView={setView}
         showAdvanced={showAdvanced}
         showAll={showAll}
+        isDisabled={isReadOnly}
       />
 
       <div className="flex flex-col gap-8 pb-20">
         {header?.({
           values,
           isDisabled: isReadOnly,
+          view,
           onChange: handleFieldChange,
         })}
 
@@ -244,7 +235,9 @@ export function SdkSectionPage({
             testId="save-button"
             type="button"
             variant="primary"
-            isDisabled={isPending || Object.keys(dirty).length === 0}
+            isDisabled={
+              isPending || (Object.keys(dirty).length === 0 && !extraDirty)
+            }
             onClick={handleSave}
           >
             {isPending

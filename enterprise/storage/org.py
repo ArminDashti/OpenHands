@@ -29,6 +29,8 @@ class Org(Base):  # type: ignore
     org_version = Column(Integer, nullable=False, default=0)
     agent_settings = Column(JSON, nullable=False, default=dict)
     # encrypted column, don't set directly, set without the underscore
+    _llm_api_key = Column(String, nullable=True)
+    # encrypted column, don't set directly, set without the underscore
     _search_api_key = Column(String, nullable=True)
     # encrypted column, don't set directly, set without the underscore
     _sandbox_api_key = Column(String, nullable=True)
@@ -59,6 +61,8 @@ class Org(Base):  # type: ignore
                 setattr(self, key, kwargs.pop(key))
 
         # Handle custom property-style fields
+        if 'llm_api_key' in kwargs:
+            self.llm_api_key = kwargs.pop('llm_api_key')
         if 'search_api_key' in kwargs:
             self.search_api_key = kwargs.pop('search_api_key')
         if 'sandbox_api_key' in kwargs:
@@ -66,6 +70,18 @@ class Org(Base):  # type: ignore
 
         if kwargs:
             raise TypeError(f'Unexpected keyword arguments: {list(kwargs.keys())}')
+
+    @property
+    def llm_api_key(self) -> SecretStr | None:
+        if self._llm_api_key:
+            decrypted = decrypt_value(self._llm_api_key)
+            return SecretStr(decrypted)
+        return None
+
+    @llm_api_key.setter
+    def llm_api_key(self, value: str | SecretStr | None):
+        raw = value.get_secret_value() if isinstance(value, SecretStr) else value
+        self._llm_api_key = encrypt_value(raw) if raw else None
 
     @property
     def search_api_key(self) -> SecretStr | None:

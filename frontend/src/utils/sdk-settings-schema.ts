@@ -140,8 +140,9 @@ function normalizeComparableValue(
 
 export function buildInitialSettingsFormValues(
   settings: Settings,
+  schemaOverride?: SettingsSchema | null,
 ): SettingsFormValues {
-  const schema = settings.agent_settings_schema;
+  const schema = schemaOverride ?? settings.agent_settings_schema;
   if (!schema) {
     return {};
   }
@@ -331,10 +332,10 @@ export function getVisibleSettingsSections(
     .filter((section) => section.fields.length > 0);
 }
 
-/** Whether the schema has any fields beyond "critical" prominence. */
+/** Whether the schema has any fields visible in the "advanced" tier. */
 export function hasAdvancedSettings(schema: SettingsSchema | null): boolean {
   if (!schema) return false;
-  return getSchemaFields(schema).some((f) => f.prominence !== "critical");
+  return getSchemaFields(schema).some((f) => f.prominence === "major");
 }
 
 /** Whether the schema has any "minor" prominence fields. */
