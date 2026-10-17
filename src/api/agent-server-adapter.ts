@@ -1133,6 +1133,7 @@ type StartConversationPayloadBase = Record<string, unknown> & {
   stuck_detection: true;
   autotitle: boolean;
   title_llm_profile?: string;
+  prompt?: string;
   worktree: boolean;
   secrets_encrypted?: true;
   conversation_id?: string;
@@ -1182,6 +1183,7 @@ export interface StartConversationOptions {
   agentProfileId?: string;
   agentProfileKind?: AgentKind;
   titleLlmProfile?: string;
+  prompt?: string;
   runtimeServicesInfo?: RuntimeServicesInfo | null;
   executionRuntime?: AgentServerInfo["execution_runtime"];
   workspaceHookConfig?: HookConfig | null;
@@ -1657,6 +1659,7 @@ export async function buildStartConversationRequestWithEncryptedSettings(options
   agentProfileId?: string;
   agentProfileKind?: AgentKind;
   titleLlmProfile?: string;
+  prompt?: string;
 }): Promise<Record<string, unknown>> {
   const [{ SecretsService }, { default: HooksService }] = await Promise.all([
     import("./secrets-service"),
