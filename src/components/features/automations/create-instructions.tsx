@@ -142,6 +142,7 @@ export function CreateInstructionsContent({
           type="button"
           variant="primary"
           testId="automations-create-automation"
+          isDisabled={createConversation.isPending}
           onClick={handleCreateAutomation}
           startContent={
             <MessageSquareShareIcon className="size-4" aria-hidden />
