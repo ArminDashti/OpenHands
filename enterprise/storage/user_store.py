@@ -47,6 +47,7 @@ class UserStore:
                 contact_name=user_info['preferred_username'],
                 contact_email=user_info['email'],
                 v1_enabled=True,
+                max_concurrent_sandboxes=DEFAULT_PERSONAL_ORG_CONCURRENT_SANDBOXES,
             )
             session.add(org)
 

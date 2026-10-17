@@ -10,6 +10,7 @@ export const useCreateConversation = () => {
   const dispatch = useDispatch();
   const { gitHubToken } = useAuth();
   const queryClient = useQueryClient();
+  const { showLimitModal } = useConversationLimitStore();
 
   const { selectedRepository, files } = useSelector(
     (state: RootState) => state.initialQuery,
@@ -37,6 +38,11 @@ export const useCreateConversation = () => {
       await queryClient.invalidateQueries({
         queryKey: ["user", "conversations"],
       });
+    },
+    onError: (error) => {
+      if (isConcurrencyLimitError(error)) {
+        showLimitModal(getConcurrencyLimit(error));
+      }
     },
   });
 };

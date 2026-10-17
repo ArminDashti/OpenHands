@@ -26,7 +26,7 @@ from openhands.app_server.app_conversation.app_conversation_info_service import 
 from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationInfo,
 )
-from openhands.app_server.errors import SandboxError
+from openhands.app_server.errors import ConcurrencyLimitError, SandboxError
 from openhands.app_server.event.event_service import EventService
 from openhands.app_server.event_callback.event_callback_service import (
     EventCallbackService,
@@ -196,6 +196,35 @@ class RemoteSandboxService(SandboxService):
             query = query.where(StoredRemoteSandbox.created_by_user_id == user_id)
         return query
 
+    async def _get_user_effective_sandbox_limit(self) -> int:
+        """Get the effective sandbox limit for the current user.
+
+        Delegates to UserContext.get_max_concurrent_sandboxes() which handles:
+        1. OrgMember.max_concurrent_sandboxes_override (if not NULL) - enterprise only
+        2. Org.max_concurrent_sandboxes (org default) - enterprise only
+        3. Global fallback (self.max_num_sandboxes) - OSS mode
+
+        Returns:
+            int: The effective maximum number of concurrent sandboxes
+        """
+        return await self.user_context.get_max_concurrent_sandboxes(
+            self.max_num_sandboxes
+        )
+
+    async def _count_user_running_sandboxes(self) -> int:
+        """Count the number of running (non-paused) sandboxes for the current user.
+
+        Queries the DB directly by created_by_user_id and is_paused, avoiding
+        a global runtime API call for every concurrency check.
+
+        Returns:
+            int: Number of running sandboxes
+        """
+        query = await self._secure_select()
+        query = query.filter(StoredRemoteSandbox.is_paused == False)  # noqa: E712
+        result = await self.db_session.execute(query)
+        return len(result.scalars().all())
+
     async def _get_stored_sandbox(self, sandbox_id: str) -> StoredRemoteSandbox | None:
         stmt = await self._secure_select()
         stmt = stmt.where(StoredRemoteSandbox.id == sandbox_id)
@@ -300,7 +329,7 @@ class RemoteSandboxService(SandboxService):
             # Create a unique id
             sandbox_id = base62.encodebytes(os.urandom(16))
 
-            # get user id
+            # Get user id for locking and record creation
             user_id = await self.user_context.get_user_id()
 
             # Store the sandbox. A non-null sandbox_template marks this row as V2,
@@ -368,6 +397,9 @@ class RemoteSandboxService(SandboxService):
 
             return await self._to_sandbox_info(stored_sandbox, runtime_data)
 
+        except ConcurrencyLimitError:
+            # Re-raise concurrency limit errors without wrapping
+            raise
         except httpx.HTTPError as e:
             _logger.error(f'Failed to start sandbox: {e}')
             raise SandboxError(f'Failed to start sandbox: {e}')
