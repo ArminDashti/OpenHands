@@ -100,8 +100,10 @@ class AutomationEventService:
         """
         org_id: UUID | None = None
         try:
+            logger.info(f'Retrieving org context for payload {payload}')
             # Resolve org context (org_id and github_org name) - uses Redis cache
             org_context = await self._resolve_org_context(payload)
+            logger.info(f'org context for payload {payload} is {org_context}')
             if not org_context:
                 return
 
@@ -110,6 +112,7 @@ class AutomationEventService:
             # Build minimal payload and forward immediately
             # Access control is NOT computed here - it's deferred to execution time
             event_payload = self._build_event_payload(org_context, payload)
+            logger.info(f'event_payload is {event_payload}')
             await self._send_to_automation_service(org_id, event_payload)
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
