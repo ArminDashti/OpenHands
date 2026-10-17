@@ -32,6 +32,8 @@ export function ConversationCard({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const { mutate: getTrajectory } = useGetTrajectory();
 
+  useAgentStatusNotification(status);
+
   const handleBlur = () => {
     if (inputRef.current?.value) {
       const trimmed = inputRef.current.value.trim();
