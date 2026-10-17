@@ -5,9 +5,10 @@ import { useGitHubAuthUrl } from "#/hooks/use-github-auth-url";
 import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { useConfig } from "#/hooks/query/use-config";
 import { Sidebar } from "#/components/features/sidebar/sidebar";
-import { WaitlistModal } from "#/components/features/waitlist/waitlist-modal";
+import { TOSModal } from "#/components/features/tos/tos-modal";
 import { AnalyticsConsentFormModal } from "#/components/features/analytics/analytics-consent-form-modal";
 import { useSettings } from "#/hooks/query/use-settings";
+import { Settings } from "#/types/settings";
 import { useAuth } from "#/context/auth-context";
 import { useMigrateUserConsent } from "#/hooks/use-migrate-user-consent";
 
@@ -135,12 +136,7 @@ export default function MainApp() {
         <Outlet />
       </div>
 
-      {renderWaitlistModal && (
-        <WaitlistModal
-          ghTokenIsSet={githubTokenIsSet}
-          githubAuthUrl={gitHubAuthUrl}
-        />
-      )}
+      {renderTOSModal && <TOSModal />}
 
       {config.data?.APP_MODE === "oss" && consentFormIsOpen && (
         <AnalyticsConsentFormModal
