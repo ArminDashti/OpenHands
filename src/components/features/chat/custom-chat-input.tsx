@@ -128,6 +128,7 @@ export function CustomChatInput({
     smartResize,
     onSubmit,
     resetManualResize,
+    clearDraft,
   );
   const handleSubmitAndSync = React.useCallback(() => {
     handleSubmit();
