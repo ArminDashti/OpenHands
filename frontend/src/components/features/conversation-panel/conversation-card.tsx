@@ -34,7 +34,7 @@ export function ConversationCard({
 
   useAgentStatusNotification(status);
 
-  const handleBlur = () => {
+  const finishTitleChange = () => {
     if (inputRef.current?.value) {
       const trimmed = inputRef.current.value.trim();
       onChangeTitle(trimmed);

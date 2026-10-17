@@ -5,7 +5,6 @@ import { formatTimeDelta } from "#/utils/format-time-delta";
 import { ConversationCard } from "#/components/features/conversation-panel/conversation-card";
 
 describe("ConversationCard", () => {
-  const onClick = vi.fn();
   const onDelete = vi.fn();
   const onChangeTitle = vi.fn();
   const onDownloadWorkspace = vi.fn();
@@ -17,6 +16,7 @@ describe("ConversationCard", () => {
   it("should render the conversation card", () => {
     render(
       <ConversationCard
+        conversationID="deadbeef"
         onDelete={onDelete}
         onClick={onClick}
         onChangeTitle={onChangeTitle}
@@ -29,14 +29,14 @@ describe("ConversationCard", () => {
 
     const card = screen.getByTestId("conversation-card");
     const title = within(card).getByTestId("conversation-card-title");
-
-    expect(title).toHaveValue("Conversation 1");
+    expect(title).toHaveTextContent("Conversation 1");
     within(card).getByText(expectedDate);
   });
 
   it("should render the repo if available", () => {
     const { rerender } = render(
       <ConversationCard
+        conversationID="deadbeef"
         onDelete={onDelete}
         onClick={onClick}
         onChangeTitle={onChangeTitle}
@@ -52,6 +52,7 @@ describe("ConversationCard", () => {
 
     rerender(
       <ConversationCard
+        conversationID="deadbeef"
         onDelete={onDelete}
         onClick={onClick}
         onChangeTitle={onChangeTitle}
@@ -87,6 +88,7 @@ describe("ConversationCard", () => {
     const user = userEvent.setup();
     render(
       <ConversationCard
+        conversationID="deadbeef"
         onDelete={onDelete}
         onClick={onClick}
         onChangeTitle={onChangeTitle}
@@ -166,9 +168,11 @@ describe("ConversationCard", () => {
 
     const title = screen.getByTestId("conversation-card-title");
 
-    await user.clear(title);
-    await user.type(title, "New Conversation Name   ");
-    await user.tab();
+    await user.clear(titleInput);
+    await user.type(titleInput, "New Conversation Name   ");
+    // hit enter key
+    const enterEvent = new KeyboardEvent('keyup', { key: 'Enter' });
+    titleInput.dispatchEvent(enterEvent);
 
     expect(onChangeTitle).toHaveBeenCalledWith("New Conversation Name");
     expect(title).toHaveValue("New Conversation Name");
@@ -190,7 +194,8 @@ describe("ConversationCard", () => {
     const title = screen.getByTestId("conversation-card-title");
 
     await user.clear(title);
-    await user.tab();
+    const enterEvent = new KeyboardEvent('keyup', { key: 'Enter' });
+    title.dispatchEvent(enterEvent);
 
     expect(onChangeTitle).not.toHaveBeenCalled();
     expect(title).toHaveValue("Conversation 1");
