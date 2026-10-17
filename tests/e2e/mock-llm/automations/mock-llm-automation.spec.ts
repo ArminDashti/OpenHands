@@ -104,9 +104,41 @@ async function waitForCreatedAutomationId(
     );
     if (response.ok()) {
       const body = (await response.json()) as { items?: unknown[] };
-      const text = JSON.stringify(body.items ?? []);
-      const match = text.match(/automation_id\\?":\\?"([0-9a-f-]{36})/i);
-      if (match) return match[1];
+      const findAutomationId = (value: unknown): string | null => {
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            const match = findAutomationId(item);
+            if (match) return match;
+          }
+          return null;
+        }
+        if (typeof value === "string") {
+          const normalized = value.replaceAll('\\\\"', '"');
+          const inlineMatch = normalized.match(
+            /automation_id["\s:]+([0-9a-f-]{36})/i,
+          );
+          if (inlineMatch) return inlineMatch[1];
+          try {
+            return findAutomationId(JSON.parse(normalized));
+          } catch {
+            return null;
+          }
+        }
+        if (!value || typeof value !== "object") return null;
+        for (const [key, nested] of Object.entries(value)) {
+          if (
+            key === "automation_id" &&
+            typeof nested === "string" &&
+            /^[0-9a-f-]{36}$/i.test(nested)
+          )
+            return nested;
+          const match = findAutomationId(nested);
+          if (match) return match;
+        }
+        return null;
+      };
+      const automationId = findAutomationId(body.items ?? []);
+      if (automationId) return automationId;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
