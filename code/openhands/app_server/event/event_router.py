@@ -108,3 +108,31 @@ async def batch_get_events(
     assert len(id) <= 100
     events = await event_service.batch_get_events(id)
     return events
+
+
+@router.get('/latest-agent-response')
+async def get_latest_agent_response(
+    conversation_id: str,
+    event_service: EventService = event_service_dependency,
+) -> AgentFinalResponse:
+    """Get the final response from the agent for this conversation.
+
+    This extracts the last meaningful agent message from the conversation events.
+    The agent can end a conversation in two ways:
+    1. By calling the finish tool — returns the finish message
+    2. By returning a text message with no tool calls — returns that message
+
+    Returns:
+        AgentFinalResponse with the agent's final response string,
+        or an empty string if no agent response was found.
+    """
+    events: list[Event] = []
+    async for event in page_iterator(
+        event_service.search_events,
+        conversation_id=UUID(conversation_id),
+        sort_order=EventSortOrder.TIMESTAMP,
+    ):
+        events.append(event)
+
+    response = get_agent_final_response(events)
+    return AgentFinalResponse(response=response)
