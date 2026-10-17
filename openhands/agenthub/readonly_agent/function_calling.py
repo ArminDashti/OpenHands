@@ -113,7 +113,7 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
         if isinstance(assistant_msg.content, str):
             thought = assistant_msg.content
         elif isinstance(assistant_msg.content, list):
-            for msg in assistant_msg.content:
+            for msg in assistant_msg.content:  # type: ignore[unreachable]
                 if msg['type'] == 'text':
                     thought += msg['text']
 

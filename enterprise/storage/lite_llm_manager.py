@@ -775,6 +775,7 @@ class LiteLlmManager:
     ) -> Callable[..., Awaitable[Any]]:
         @functools.wraps(internal_fn)
         async def wrapper(*args, **kwargs):
+            headers = {'x-goog-api-key': LITE_LLM_API_KEY} if LITE_LLM_API_KEY else {}
             async with httpx.AsyncClient(
                 headers={'x-goog-api-key': LITE_LLM_API_KEY}
             ) as client:
