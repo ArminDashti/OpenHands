@@ -60,9 +60,14 @@ def create_runtime(
 def create_agent(runtime: Runtime, config: AppConfig) -> Agent:
     agent_cls: Type[Agent] = Agent.get_cls(config.default_agent)
     agent_config = config.get_agent_config(config.default_agent)
-    llm_config = config.get_llm_config_from_agent(config.default_agent)
+
+    # Create LLM if not provided
+    if llm is None:
+        llm_config = config.get_llm_config_from_agent(config.default_agent)
+        llm = LLM(config=llm_config)
+
     agent = agent_cls(
-        llm=LLM(config=llm_config),
+        llm=llm,
         config=agent_config,
     )
     if agent.prompt_manager:
@@ -92,6 +97,7 @@ def create_controller(
     except Exception as e:
         logger.debug(f'Cannot restore agent state: {e}')
 
+    # The agent already has an initialized LLM
     controller = AgentController(
         agent=agent,
         max_iterations=config.max_iterations,
