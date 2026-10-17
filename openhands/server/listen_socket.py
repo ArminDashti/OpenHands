@@ -2,6 +2,7 @@ from fastapi import status
 
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.schema.action import ActionType
+from openhands.core.schema.agent import AgentState
 from openhands.events.action import (
     NullAction,
 )
