@@ -1,6 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
-import { server } from "#/mocks/node";
 import "@testing-library/jest-dom/vitest";
 
 // Some modules read env at import time before Vitest's per-test hooks run.
@@ -27,10 +26,7 @@ windowStub.scrollTo = vi.fn();
 // Node.js 25+ ships a built-in localStorage that requires --localstorage-file
 // and is not functional without it. Stub it with a plain in-memory
 // implementation so zustand's persist middleware works in tests.
-if (
-  typeof localStorage === "undefined" ||
-  typeof localStorage.setItem !== "function"
-) {
+if (typeof HTMLCanvasElement === "undefined") {
   const store: Record<string, string> = {};
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => store[key] ?? null,
@@ -49,6 +45,8 @@ if (
     key: (index: number) => Object.keys(store)[index] ?? null,
   });
 }
+
+const { server } = await import("#/mocks/node");
 
 if (typeof requestAnimationFrame === "undefined") {
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
