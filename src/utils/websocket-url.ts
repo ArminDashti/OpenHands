@@ -50,7 +50,6 @@ function extractPathPrefix(conversationUrl: string | null | undefined): string {
       return "";
     }
   }
-  return "";
 }
 
 /**

@@ -1,11 +1,14 @@
 import React from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Typography } from "#/ui/typography";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
+import { useConfig } from "#/hooks/query/use-config";
 import { useUpdateConversation } from "#/hooks/mutation/use-update-conversation";
 import { useConversationNameContextMenu } from "#/hooks/use-conversation-name-context-menu";
 import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
+import { agentDisplayLabel } from "#/utils/agent-display-label";
 import { EllipsisButton } from "../conversation-panel/ellipsis-button";
 import { ConversationNameContextMenu } from "./conversation-name-context-menu";
 import { SystemMessageModal } from "../conversation-panel/system-message-modal";
@@ -18,6 +21,7 @@ export function ConversationName() {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
   const { data: conversation } = useActiveConversation();
+  const { data: config } = useConfig();
   const { mutate: updateConversation } = useUpdateConversation();
 
   const [titleMode, setTitleMode] = React.useState<"view" | "edit">("view");
@@ -119,6 +123,13 @@ export function ConversationName() {
   if (!conversation) {
     return null;
   }
+
+  const agentLabel = agentDisplayLabel(
+    conversation.agent_kind,
+    conversation.llm_model,
+    conversation.tags,
+    config?.acp_providers,
+  );
 
   return (
     <>

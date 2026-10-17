@@ -89,7 +89,7 @@ async def valid_conversation(
 
 @router.post('/{sandbox_id}/conversations')
 async def on_conversation_update(
-    conversation_info: ConversationInfo,
+    conversation_info: ACPConversationInfo,
     sandbox_info: SandboxInfo = Depends(valid_sandbox),
     app_conversation_info_service: AppConversationInfoService = app_conversation_info_service_dependency,
 ) -> Success:

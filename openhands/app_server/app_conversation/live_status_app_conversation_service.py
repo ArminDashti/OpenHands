@@ -27,6 +27,10 @@ from openhands.app_server.app_conversation.acp_resume import (
 from openhands.app_server.app_conversation.agent_server_routing import (
     acp_display_name as _acp_display_name,
 )
+from openhands.app_server.app_conversation.agent_server_routing import (
+    ACP_SERVER_TAG,
+    agent_kind_to_router_path,
+)
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
 )
@@ -243,22 +247,26 @@ class LiveStatusAppConversationService(GitAppConversationService):
             info = ConversationInfo.model_validate(response.json())
             if isinstance(start_conversation_request.agent, ACPAgent):
                 agent_kind = 'acp'
-                display_model = start_conversation_request.agent.acp_model
+                # Persist the active ACP provider key so the conversation UI
+                # can resolve a brand label ("Claude Code", "Codex", …) via
+                # the SDK registry without keeping a per-conversation column.
+                acp_user = await self.user_context.get_user_info()
+                if isinstance(acp_user.agent_settings, ACPAgentSettings):
+                    tags[ACP_SERVER_TAG] = acp_user.agent_settings.acp_server
             else:
                 info = ConversationInfo.model_validate(response.json())
                 agent_kind = 'llm'
                 display_model = start_conversation_request.agent.llm.model
 
-            # Store info...
-            user_id = await self.user_context.get_user_id()
             app_conversation_info = AppConversationInfo(
                 id=info.id,
                 # TODO: As of writing, StartConversationRequest from AgentServer does not have a title
                 title=f'Conversation {info.id}',
                 sandbox_id=sandbox.id,
                 created_by_user_id=user_id,
-                llm_model=display_model,
+                llm_model=llm_model,
                 agent_kind=agent_kind,
+                tags=tags,
                 # Git parameters
                 selected_repository=request.selected_repository,
                 selected_branch=request.selected_branch,
@@ -331,7 +339,7 @@ class LiveStatusAppConversationService(GitAppConversationService):
     async def _get_live_conversation_info(
         self,
         sandbox: SandboxInfo,
-        conversation_ids: list[str],
+        conversation_ids: list[UUID],
         conversation_kind_by_id: dict[str, str] | None = None,
     ) -> list[ConversationInfo | ACPConversationInfo]:
         """Get agent status for multiple conversations from the Agent Server.
@@ -394,7 +402,9 @@ class LiveStatusAppConversationService(GitAppConversationService):
             try:
                 url = f'{agent_server_url.rstrip("/")}/api/acp/conversations'
                 response = await self.httpx_client.get(
-                    url, params={'ids': acp_ids}, headers=headers
+                    url,
+                    params={'ids': [str(c) for c in acp_ids]},
+                    headers=headers,
                 )
                 response.raise_for_status()
                 data = response.json()

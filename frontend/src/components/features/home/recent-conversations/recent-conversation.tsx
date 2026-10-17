@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import CodeBranchIcon from "#/icons/u-code-branch.svg?react";
 import { Conversation } from "#/api/open-hands.types";
 import { GitProviderIcon } from "#/components/shared/git-provider-icon";
+import { useConfig } from "#/hooks/query/use-config";
 import { Provider } from "#/types/settings";
 import { formatTimeDelta } from "#/utils/format-time-delta";
 import { I18nKey } from "#/i18n/declaration";
@@ -15,9 +16,16 @@ interface RecentConversationProps {
 
 export function RecentConversation({ conversation }: RecentConversationProps) {
   const { t } = useTranslation();
+  const { data: config } = useConfig();
 
   const hasRepository =
     conversation.selected_repository && conversation.selected_branch;
+  const agentLabel = agentDisplayLabel(
+    conversation.agent_kind,
+    conversation.llm_model,
+    conversation.tags,
+    config?.acp_providers,
+  );
 
   return (
     <Link to={`/conversations/${conversation.conversation_id}`}>
