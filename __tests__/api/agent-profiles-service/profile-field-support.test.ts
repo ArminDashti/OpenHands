@@ -3,6 +3,7 @@ import {
   MIN_AGENT_SERVER_VERSION_FOR_PROFILE_SWITCH_LLM_TOOL,
   agentProfileSupportsSecretRefs,
   agentProfileSupportsSwitchLlmTool,
+  agentProfileSupportsTools,
 } from "#/api/agent-profiles-service/profile-field-support";
 
 const mockGetCachedAgentServerVersion = vi.fn<() => string | null>();

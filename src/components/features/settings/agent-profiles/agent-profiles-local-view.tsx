@@ -62,6 +62,9 @@ function toAgentSettingsOverride(
   const switchLlmToolEnabled =
     (profile as { enable_switch_llm_tool?: boolean }).enable_switch_llm_tool ??
     true;
+  // `tools` rides untyped for the same reason as `enable_switch_llm_tool`: the
+  // pinned ts-client's profile model predates it.
+  const storedTools = (profile as { tools?: unknown }).tools ?? null;
   return {
     agent_kind: "openhands",
     mcp_server_refs: profile.mcp_server_refs ?? null,

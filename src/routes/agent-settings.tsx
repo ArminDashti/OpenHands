@@ -10,12 +10,17 @@ import { SettingsInput } from "#/components/features/settings/settings-input";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
 import { SchemaField } from "#/components/features/settings/sdk-settings/schema-field";
 import { AcpCredentialsSection } from "#/components/features/settings/acp-credentials-section";
+import { OptionalTag } from "#/components/features/settings/optional-tag";
+import { ProfileScopeList } from "#/components/features/settings/agent-profiles/profile-scope-list";
 import { useAcpCredentialForm } from "#/hooks/use-acp-credential-form";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { ProfileScopeList } from "#/components/features/settings/agent-profiles/profile-scope-list";
 import { Typography } from "#/ui/typography";
 import { I18nKey } from "#/i18n/declaration";
-import { formControlSwitchDescriptionClassName } from "#/utils/form-control-classes";
+import {
+  formControlMultilineFieldClassName,
+  formControlSwitchDescriptionClassName,
+} from "#/utils/form-control-classes";
 import { cn } from "#/utils/utils";
 import { SettingsFieldSchema, SettingsValue } from "#/types/settings";
 import {
@@ -244,6 +249,7 @@ export function buildAgentProfileFields(
       acp_args: null,
     };
   }
+  const trimmedInstructions = instructions.trim();
   const fields: Extract<AgentProfileFieldsDraft, { agent_kind: "openhands" }> =
     {
       agent_kind: "openhands",
@@ -251,6 +257,15 @@ export function buildAgentProfileFields(
       enable_sub_agents: subAgentsEnabled,
       ...secretRefs,
     };
+  if (toolsSupportedOnProfile) {
+    fields.tools = buildProfileToolsValue({
+      mode: toolsMode,
+      selected: selectedTools,
+      params: storedToolParams,
+      subAgentsEnabled,
+      usableTools,
+    });
+  }
   if (switchLlmToolField && switchLlmToolSupportedOnProfile) {
     // Two conditions, two different questions. The schema tells us the field
     // is a real setting on this server; the version gate tells us its
@@ -664,7 +679,10 @@ export function AgentSettingsScreen({
         isCustomAcpModel !== loadedSnapshot.isCustomAcpModel
       : subAgentsEnabled !== initialSubAgentsEnabled ||
         switchLlmToolEnabled !== initialSwitchLlmToolEnabled ||
-        toolConcurrency !== initialToolConcurrency);
+        toolConcurrency !== initialToolConcurrency ||
+        instructions !== initialInstructions ||
+        toolsMode !== initialTools.mode ||
+        orderedSelectedTools.join(",") !== initialTools.selected.join(","));
   const credentialsDirty = acpCredentialForm.isDirty;
   const isAnyDirty = settingsDirty || credentialsDirty;
   useEffect(() => {
