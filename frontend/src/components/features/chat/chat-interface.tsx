@@ -98,6 +98,11 @@ export function ChatInterface() {
     agentState === AgentState.AWAITING_USER_INPUT ||
     agentState === AgentState.FINISHED;
 
+  // If in setup mode, show setup progress instead of regular chat
+  if (isSetupMode && conversationId) {
+    return <ConversationSetupFlow conversationId={conversationId} />;
+  }
+
   return (
     <div className="h-full flex flex-col justify-between">
       {messages.length === 0 && (
