@@ -491,40 +491,13 @@ class AgentServerConversationService {
     );
     const prompt = settings.title_generation_prompt?.trim() || undefined;
     const conversationId = uuidv4();
-    // @spec WUP-001 — Send an absolute working_dir to the agent-server.
-    // The default is `workspace/project/<hex>` (relative); without
-    // resolving it here, `/api/file/upload` later prepends `/` and writes
-    // to `/workspace/...` (read-only on macOS and fresh containers). When
-    // the user picks an explicit workspace, `workingDirOverride` is
-    // already absolute (it comes from `search_subdirs`).
-    //
-    // Pick the base working dir per-backend:
-    //   1. explicit user workspace pick → use it as-is;
-    //   2. no pick, backend that served this frontend → the baked default
-    //      (honors a launcher-baked absolute `VITE_WORKING_DIR`);
-    //   3. no pick, any other backend → the backend-relative default.
-    // A baked absolute dir is a path on the host that served this frontend,
-    // so it is only valid on that backend. Using it for a different backend
-    // (e.g. a remote sandbox) makes the agent-server mkdir an unwritable path
-    // and the conversation fails at the first prompt (e.g. `Permission
-    // denied: '/Users'`). The relative default is anchored per-backend by
-    // `resolveAbsoluteAgentServerPath()` via `/api/file/home`. The gate keys
-    // on the active backend's host (not its id): the seeded `default-local`
-    // entry is mutable, so a user can edit it to point at a remote host while
-    // its id stays `default-local`.
-    const backendHost = getActiveBackend().backend.host;
-    const baseWorkingDir =
-      workingDirOverride ??
-      buildConversationWorkingDirForBackend(conversationId, backendHost);
-    const workingDir = await resolveAbsoluteAgentServerPath(baseWorkingDir);
-    // The agent-server checks `<project_dir>/.openhands/hooks.json` literally,
-    // so hooks need the workspace root: the per-conversation subdir below it is
-    // created only after this request (#16907). An explicit pick is the root.
-    const hooksProjectDir = workingDirOverride
-      ? workingDir
-      : await resolveAbsoluteAgentServerPath(
-          getWorkspaceRootForBackend(backendHost),
-        );
+    const { workingDir, hooksProjectDir, isolated } =
+      await resolveNewConversationWorkspace({
+        conversationId,
+        workingDir: workingDirOverride,
+        selectedRepository: metadata?.selected_repository,
+        parentConversationId,
+      });
     const resolvedWorkspaceMode =
       workspaceMode ?? (workingDirOverride ? "local_repo" : "new_worktree");
 
@@ -542,7 +515,7 @@ class AgentServerConversationService {
       parentConversationId,
       workingDir,
       hooksProjectDir,
-      worktree: resolvedWorkspaceMode === "new_worktree",
+      worktree: !isolated && resolvedWorkspaceMode === "new_worktree",
       agentProfileId,
       agentProfileKind,
       titleLlmProfile,
@@ -725,6 +698,7 @@ class AgentServerConversationService {
     // directly via the conversationUrl override.
     const vscodeUrl = await new VSCodeClient(
       getAgentServerClientOptions({
+        conversationId,
         conversationUrl,
         sessionApiKey,
       }),
@@ -838,7 +812,9 @@ class AgentServerConversationService {
       filePath ?? `${workingDir}/.agents_tmp/PLAN.md`,
       workingDir,
     );
-    return new FileClient(getAgentServerClientOptions()).downloadTextFile(path);
+    return new FileClient(
+      getAgentServerClientOptions({ conversationId, workingDir }),
+    ).downloadTextFile(path);
   }
 
   static async downloadConversation(conversationId: string): Promise<Blob> {

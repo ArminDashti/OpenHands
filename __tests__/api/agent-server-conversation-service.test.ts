@@ -1,3 +1,4 @@
+import { supportsConversationRuntimeRoutes } from "#/api/agent-server-client-options";
 import {
   ConversationClient,
   FileClient,
@@ -502,9 +503,10 @@ describe("AgentServerConversationService", () => {
         workingDir: "/workspace/project/agent-canvas",
       });
       expect(FileClient).toHaveBeenCalledWith({
+        conversationId: "conv-123",
         host: "http://localhost:54928",
         apiKey: "test-api-key",
-        workingDir: "/workspace/project/agent-canvas",
+        workingDir: "/workspace/project/agent-canvas/conv-123",
       });
       expect(mockHttpGet).toHaveBeenCalledWith(
         "/api/file/download",

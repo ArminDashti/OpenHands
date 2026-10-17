@@ -1,4 +1,3 @@
-import { FileClient } from "@openhands/typescript-client/clients";
 import { RemoteWorkspace } from "@openhands/typescript-client/workspace/remote-workspace";
 import { getAgentServerClientOptions } from "#/api/agent-server-client-options";
 import { getActiveBackend } from "#/api/backend-registry/active-store";
@@ -27,6 +26,7 @@ class AgentServerRuntimeService {
     command: string,
     cwd?: string,
     timeout = 30,
+    conversationId?: string,
   ): Promise<CommandResult> {
     const active = getActiveBackend().backend;
 
@@ -47,7 +47,11 @@ class AgentServerRuntimeService {
     // anyway, but passing a ms-mismatched default is a latent footgun if any
     // method on the client ever lacks a per-request timeout.
     const result = await new RemoteWorkspace(
-      getAgentServerClientOptions({ conversationUrl, sessionApiKey }),
+      getAgentServerClientOptions({
+        conversationUrl,
+        sessionApiKey,
+        conversationId,
+      }),
     ).executeCommand(command, cwd, timeout);
     // The SDK already coerces these (`exit_code ?? 0`, `stdout || ''`,
     // `stderr || ''`); keep a defensive fallback so a contract drift in the

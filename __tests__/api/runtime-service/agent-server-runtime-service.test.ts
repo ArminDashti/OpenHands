@@ -1,4 +1,3 @@
-import { FileClient } from "@openhands/typescript-client/clients";
 import { RemoteWorkspace } from "@openhands/typescript-client/workspace/remote-workspace";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,20 +12,13 @@ import type { Backend } from "#/api/backend-registry/types";
 
 // ─── SDK client mocks ───────────────────────────────────────────────────────
 
-const { executeCommandMock, downloadFileMock } = vi.hoisted(() => ({
+const { executeCommandMock } = vi.hoisted(() => ({
   executeCommandMock: vi.fn(),
-  downloadFileMock: vi.fn(),
 }));
 
 vi.mock("@openhands/typescript-client/workspace/remote-workspace", () => ({
   RemoteWorkspace: vi.fn(function RemoteWorkspaceMock() {
     return { executeCommand: executeCommandMock };
-  }),
-}));
-
-vi.mock("@openhands/typescript-client/clients", () => ({
-  FileClient: vi.fn(function FileClientMock() {
-    return { downloadFile: downloadFileMock };
   }),
 }));
 
@@ -69,9 +61,7 @@ beforeEach(() => {
   window.localStorage.clear();
   __resetActiveStoreForTests();
   vi.mocked(RemoteWorkspace).mockClear();
-  vi.mocked(FileClient).mockClear();
   executeCommandMock.mockReset();
-  downloadFileMock.mockReset();
   vi.mocked(callCloudProxy).mockReset();
   vi.mocked(getAgentServerClientOptions).mockReset();
   vi.mocked(getAgentServerClientOptions).mockReturnValue({

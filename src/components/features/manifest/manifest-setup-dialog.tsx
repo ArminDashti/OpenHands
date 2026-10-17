@@ -326,6 +326,9 @@ export function SetupDialog({ entry, onClose }: SetupDialogProps) {
     }, PREFLIGHT_DEBOUNCE_MS);
   };
 
+  const requiresAgentProfile =
+    entry.requires.features?.includes("agentProfiles") ?? false;
+
   const handleContinue = async () => {
     if (currentStep === "prerequisites") {
       setStep("form");
@@ -339,6 +342,9 @@ export function SetupDialog({ entry, onClose }: SetupDialogProps) {
       selectedTrigger,
       selectedAction,
     );
+    if (requiresAgentProfile && !values.agent_profile_id) {
+      failures.agent_profile_id = { code: "required" };
+    }
     if (Object.keys(failures).length > 0) {
       setLocalErrors(failures);
       return;
@@ -562,26 +568,57 @@ export function SetupDialog({ entry, onClose }: SetupDialogProps) {
                   isOptionsLoading={
                     field.type === "llm-profile" && isLoadingLlmProfileOptions
                   }
-                  onChange={(value) => setFieldValue(name, value)}
-                  onRepositoryChange={(repository) =>
-                    setRepositories((current) => ({
-                      ...current,
-                      [name]: repository,
-                    }))
+                  onChange={(value) =>
+                    setFieldValue("agent_profile_id", value ?? "")
                   }
-                  onBlur={handleFieldBlur}
                 />
-              ))}
+              )}
+              {Object.entries(fields)
+                .filter(
+                  ([, field]) =>
+                    !values.agent_profile_id || field.type !== "llm-profile",
+                )
+                .map(([name, field]) => (
+                  <SetupFormField
+                    key={name}
+                    name={name}
+                    field={field}
+                    value={values[name] ?? ""}
+                    error={resolveFieldError(name)}
+                    options={getFieldOptions(name, field, overrides)}
+                    repository={repositories[name] ?? null}
+                    disabled={isSubmitting}
+                    isOptionsLoading={
+                      field.type === "llm-profile" && isLoadingLlmProfileOptions
+                    }
+                    onChange={(value) => setFieldValue(name, value)}
+                    onRepositoryChange={(repository) =>
+                      setRepositories((current) => ({
+                        ...current,
+                        [name]: repository,
+                      }))
+                    }
+                    onBlur={handleFieldBlur}
+                  />
+                ))}
             </div>
           )}
 
           {!isLoading && !isUnsupported && currentStep === "review" && (
-            <SetupReviewStep
-              setup={entry.setup}
-              values={values}
-              selectedTrigger={selectedTrigger}
-              selectedAction={selectedAction}
-            />
+            <>
+              {typeof values.agent_profile_id === "string" &&
+                values.agent_profile_id && (
+                  <AutomationAgentProfileSelector
+                    value={values.agent_profile_id}
+                  />
+                )}
+              <SetupReviewStep
+                setup={entry.setup}
+                values={values}
+                selectedTrigger={selectedTrigger}
+                selectedAction={selectedAction}
+              />
+            </>
           )}
 
           {serviceErrors.formErrors.map((message) => (

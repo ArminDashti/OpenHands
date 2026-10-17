@@ -122,7 +122,7 @@ function classifyFetchError(error: unknown): SandboxIssue | null {
  * Search `BashOutput` events for an automation run's bash command.
  *
  * - **Local backend**: the query fires as soon as the modal opens and
- *   we have a `bash_command_id`. The conversation lookup runs in
+ *   we have both the command and owning conversation IDs. The conversation lookup runs in
  *   parallel; if it resolves with `session_api_key`/`conversation_url`
  *   those are passed through, but a missing/stale conversation does not
  *   block the bash query (the local agent-server hosts events under a
@@ -226,6 +226,7 @@ export function useBashCommandLogs(options: UseBashCommandLogsOptions) {
   const hasRequiredAuth = isCloud ? !!runtimeUrl : true;
   const canFire =
     enabled &&
+    !!conversationId &&
     !!bashCommandId &&
     hasRequiredAuth &&
     !preflightIssue &&
@@ -234,6 +235,7 @@ export function useBashCommandLogs(options: UseBashCommandLogsOptions) {
   const query = useQuery({
     queryKey: [
       ...BASH_COMMAND_LOGS_QUERY_KEY,
+      conversationId,
       bashCommandId,
       runtimeUrl,
       sessionApiKey,

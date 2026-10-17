@@ -156,6 +156,8 @@ export interface AutomationRunStatusDetail {
 }
 
 export interface AutomationRun {
+  /** Profile selected when this run was queued. */
+  agent_profile_id?: string | null;
   id: string;
   status: AutomationRunStatus;
   conversation_id: string | null;

@@ -47,6 +47,7 @@ class BashService {
    * callers can concatenate `stdout` / `stderr` values directly.
    */
   static async listOutputs(
+    conversationId: string,
     conversationUrl: string | null,
     sessionApiKey: string | null | undefined,
     bashCommandId: string,
@@ -55,6 +56,7 @@ class BashService {
     let pageId: string | undefined;
     for (let i = 0; i < MAX_OUTPUT_PAGES; i += 1) {
       const page = await BashService.searchEvents(
+        conversationId,
         conversationUrl,
         sessionApiKey,
         {
@@ -74,6 +76,7 @@ class BashService {
   }
 
   private static async searchEvents(
+    conversationId: string,
     conversationUrl: string | null,
     sessionApiKey: string | null | undefined,
     options: SearchOptions,
@@ -92,6 +95,7 @@ class BashService {
 
     return new BashClient(
       getAgentServerClientOptions({
+        conversationId,
         ...(conversationUrl ? { conversationUrl } : {}),
         sessionApiKey,
       }),
