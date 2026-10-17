@@ -107,19 +107,25 @@ class OrgMemberStore:
             return True
 
     @staticmethod
+    def get_agent_settings_from_org_member(org_member: OrgMember) -> dict[str, object]:
+        return get_org_member_agent_settings(org_member)
+
+    @staticmethod
     def get_kwargs_from_settings(settings: Settings):
-        kwargs = {
-            normalized: getattr(settings, normalized)
-            for c in OrgMember.__table__.columns
-            if (normalized := c.name.lstrip('_')) and hasattr(settings, normalized)
+        return {
+            'llm_api_key': settings.get_secret_agent_setting('llm.api_key'),
+            'agent_settings': settings.normalized_agent_settings(
+                strip_secret_values=True
+            ),
         }
-        return kwargs
 
     @staticmethod
     def get_kwargs_from_user_settings(user_settings: UserSettings):
-        kwargs = {
-            normalized: getattr(user_settings, normalized)
-            for c in OrgMember.__table__.columns
-            if (normalized := c.name.lstrip('_')) and hasattr(user_settings, normalized)
+        agent_settings = dict(user_settings.agent_settings or {})
+        if agent_settings and 'schema_version' not in agent_settings:
+            agent_settings['schema_version'] = 1
+        return {
+            'llm_api_key': user_settings.llm_api_key,
+            'agent_settings': agent_settings,
         }
         return kwargs

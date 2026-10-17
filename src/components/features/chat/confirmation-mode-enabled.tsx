@@ -8,8 +8,11 @@ function ConfirmationModeEnabled() {
   const { t } = useTranslation("openhands");
 
   const { data: settings } = useSettings();
+  const confirmationModeEnabled =
+    settings &&
+    getAgentSettingValue(settings, "verification.confirmation_mode") === true;
 
-  if (!settings?.confirmation_mode) {
+  if (!confirmationModeEnabled) {
     return null;
   }
 

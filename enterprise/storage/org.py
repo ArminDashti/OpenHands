@@ -19,14 +19,7 @@ class Org(Base):  # type: ignore
     name = Column(String, nullable=False, unique=True)
     contact_name = Column(String, nullable=True)
     contact_email = Column(String, nullable=True)
-    agent = Column(String, nullable=True)
-    default_max_iterations = Column(Integer, nullable=True)
-    security_analyzer = Column(String, nullable=True)
-    confirmation_mode = Column(Boolean, nullable=True, default=False)
-    default_llm_model = Column(String, nullable=True)
-    default_llm_base_url = Column(String, nullable=True)
     remote_runtime_resource_factor = Column(Integer, nullable=True)
-    enable_default_condenser = Column(Boolean, nullable=False, default=True)
     billing_margin = Column(Float, nullable=True, default=DEFAULT_BILLING_MARGIN)
     enable_proactive_conversation_starters = Column(
         Boolean, nullable=False, default=True
@@ -34,7 +27,7 @@ class Org(Base):  # type: ignore
     sandbox_base_container_image = Column(String, nullable=True)
     sandbox_runtime_container_image = Column(String, nullable=True)
     org_version = Column(Integer, nullable=False, default=0)
-    mcp_config = Column(JSON, nullable=True)
+    agent_settings = Column(JSON, nullable=False, default=dict)
     # encrypted column, don't set directly, set without the underscore
     _search_api_key = Column(String, nullable=True)
     # encrypted column, don't set directly, set without the underscore

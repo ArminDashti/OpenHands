@@ -81,11 +81,11 @@ class LiteLlmManager:
                     None,
                 )
 
-        oss_settings.agent = 'CodeActAgent'
+        oss_settings.set_agent_setting('agent', 'CodeActAgent')
         # Use the model corresponding to the current user settings version
-        oss_settings.llm_model = get_default_litellm_model()
-        oss_settings.llm_api_key = SecretStr(key)
-        oss_settings.llm_base_url = LITE_LLM_API_URL
+        oss_settings.set_agent_setting('llm.model', get_default_litellm_model())
+        oss_settings.set_agent_setting('llm.api_key', SecretStr(key))
+        oss_settings.set_agent_setting('llm.base_url', LITE_LLM_API_URL)
         return oss_settings
 
     @staticmethod

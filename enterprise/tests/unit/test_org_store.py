@@ -88,7 +88,10 @@ def test_update_org(session_maker, mock_litellm_api):
     # Test updating org details
     with session_maker() as session:
         # Create a test org
-        org = Org(name='test-org', agent='CodeActAgent')
+        org = Org(
+            name='test-org',
+            agent_settings={'schema_version': 1, 'agent': 'CodeActAgent'},
+        )
         session.add(org)
         session.commit()
         org_id = org.id
@@ -103,7 +106,7 @@ def test_update_org(session_maker, mock_litellm_api):
 
         assert updated_org is not None
         assert updated_org.name == 'updated-org'
-        assert updated_org.agent == 'PlannerAgent'
+        assert updated_org.agent_settings['agent'] == 'PlannerAgent'
 
 
 def test_update_org_not_found(session_maker):
@@ -126,7 +129,7 @@ def test_create_org(session_maker, mock_litellm_api):
 
         assert org is not None
         assert org.name == 'new-org'
-        assert org.agent == 'CodeActAgent'
+        assert org.agent_settings['agent'] == 'CodeActAgent'
         assert org.id is not None
 
 
@@ -178,7 +181,7 @@ def test_get_kwargs_from_settings():
     settings = Settings(
         language='es',
         agent='CodeActAgent',
-        llm_model='gpt-4',
+        llm_model='anthropic/claude-sonnet-4-5-20250929',
         llm_api_key=SecretStr('test-key'),
         enable_sound_notifications=True,
     )
@@ -186,10 +189,13 @@ def test_get_kwargs_from_settings():
     kwargs = OrgStore.get_kwargs_from_settings(settings)
 
     # Should only include fields that exist in Org model
-    assert 'agent' in kwargs
-    assert 'default_llm_model' in kwargs
-    assert kwargs['agent'] == 'CodeActAgent'
-    assert kwargs['default_llm_model'] == 'gpt-4'
+    assert 'agent_settings' in kwargs
+    assert 'agent' not in kwargs
+    assert 'default_llm_model' not in kwargs
+    assert kwargs['agent_settings']['agent'] == 'CodeActAgent'
+    assert (
+        kwargs['agent_settings']['llm.model'] == 'anthropic/claude-sonnet-4-5-20250929'
+    )
     # Should not include fields that don't exist in Org model
     assert 'language' not in kwargs  # language is not in Org model
     assert 'llm_api_key' not in kwargs

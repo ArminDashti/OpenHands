@@ -64,7 +64,6 @@ const createMockUser = (
   llm_api_key: "",
   max_iterations: 100,
   llm_model: "gpt-4",
-  llm_api_key_for_byor: null,
   llm_base_url: "",
   status: "active",
   ...overrides,
@@ -448,7 +447,6 @@ describe("UserContextMenu", () => {
         llm_api_key: "**********",
         max_iterations: 20,
         llm_model: "gpt-4",
-        llm_api_key_for_byor: null,
         llm_base_url: "https://api.openai.com",
         status: "active",
       });
@@ -481,7 +479,6 @@ describe("UserContextMenu", () => {
         llm_api_key: "**********",
         max_iterations: 20,
         llm_model: "gpt-4",
-        llm_api_key_for_byor: null,
         llm_base_url: "https://api.openai.com",
         status: "active",
       });

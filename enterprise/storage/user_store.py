@@ -78,9 +78,6 @@ class UserStore:
             from storage.org_member_store import OrgMemberStore
 
             org_member_kwargs = OrgMemberStore.get_kwargs_from_settings(settings)
-            # avoid setting org member llm fields to use org defaults on user creation
-            del org_member_kwargs['llm_model']
-            del org_member_kwargs['llm_base_url']
             org_member = OrgMember(
                 org_id=org.id,
                 user_id=user.id,
@@ -158,10 +155,13 @@ class UserStore:
             org_kwargs = OrgStore.get_kwargs_from_user_settings(decrypted_user_settings)
             org_kwargs.pop('id', None)
 
-            # if user has custom settings, set org defaults to current version
+            # If the user has custom settings, keep the org defaults minimal.
             if custom_settings:
-                org_kwargs['default_llm_model'] = get_default_litellm_model()
-                org_kwargs['llm_base_url'] = LITE_LLM_API_URL
+                org_kwargs['agent_settings'] = {
+                    'schema_version': 1,
+                    'llm.model': get_default_litellm_model(),
+                    'llm.base_url': LITE_LLM_API_URL,
+                }
                 org_kwargs['org_version'] = ORG_SETTINGS_VERSION
 
             for key, value in org_kwargs.items():
@@ -195,9 +195,6 @@ class UserStore:
             org_member_kwargs = OrgMemberStore.get_kwargs_from_user_settings(
                 decrypted_user_settings
             )
-
-            # if the user did not have custom settings in the old model,
-            # then use the org defaults by not setting org_member fields
             if not custom_settings:
                 del org_member_kwargs['llm_model']
                 del org_member_kwargs['llm_base_url']
@@ -414,15 +411,16 @@ class UserStore:
         Returns:
             True if user has custom settings, False if using old defaults
         """
-        # Normalize values
-        user_model = (
-            user_settings.llm_model.strip() or None if user_settings.llm_model else None
+        persisted_agent_settings = user_settings.agent_settings or {}
+        user_model = persisted_agent_settings.get('llm.model') or getattr(
+            user_settings, 'llm_model', None
         )
-        user_base_url = (
-            user_settings.llm_base_url.strip() or None
-            if user_settings.llm_base_url
-            else None
+        user_base_url = persisted_agent_settings.get('llm.base_url') or getattr(
+            user_settings, 'llm_base_url', None
         )
+
+        user_model = user_model.strip() or None if user_model else None
+        user_base_url = user_base_url.strip() or None if user_base_url else None
 
         # Custom base_url = definitely custom settings (BYOK)
         if user_base_url and user_base_url != LITE_LLM_API_URL:

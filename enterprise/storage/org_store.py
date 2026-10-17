@@ -39,7 +39,13 @@ class OrgStore:
         with session_maker() as session:
             org = Org(**kwargs)
             org.org_version = ORG_SETTINGS_VERSION
-            org.default_llm_model = get_default_litellm_model()
+            org.agent_settings = merge_agent_settings(
+                org.agent_settings,
+                {
+                    'llm.model': get_org_agent_settings(org).get('llm.model')
+                    or get_default_litellm_model()
+                },
+            )
             if org.v1_enabled is None:
                 org.v1_enabled = DEFAULT_V1_ENABLED
             session.add(org)
@@ -92,8 +98,10 @@ class OrgStore:
                 org.id,
                 {
                     'org_version': ORG_SETTINGS_VERSION,
-                    'default_llm_model': get_default_litellm_model(),
-                    'llm_base_url': LITE_LLM_API_URL,
+                    'agent_settings': {
+                        'llm.model': get_default_litellm_model(),
+                        'llm.base_url': LITE_LLM_API_URL,
+                    },
                 },
             )
         return org
@@ -118,6 +126,8 @@ class OrgStore:
 
             if 'id' in kwargs:
                 kwargs.pop('id')
+
+            agent_settings_updates = kwargs.pop('agent_settings', None)
             for key, value in kwargs.items():
                 if hasattr(org, key):
                     setattr(org, key, value)
@@ -128,45 +138,25 @@ class OrgStore:
 
     @staticmethod
     def get_kwargs_from_settings(settings: Settings):
-        kwargs = {}
-
-        for c in Org.__table__.columns:
-            # Normalize for lookup
-            normalized = (
-                c.name.removeprefix('_default_').removeprefix('default_').lstrip('_')
-            )
-
-            if not hasattr(settings, normalized):
-                continue
-
-            # ---- FIX: Output key should drop *only* leading "_" but preserve "default" ----
-            key = c.name
-            if key.startswith('_'):
-                key = key[1:]  # remove only the very first leading underscore
-
-            kwargs[key] = getattr(settings, normalized)
-
+        kwargs = {
+            field: getattr(settings, field)
+            for field in _ORG_SETTINGS_FIELDS
+            if hasattr(settings, field)
+        }
+        kwargs['agent_settings'] = settings.normalized_agent_settings(
+            strip_secret_values=True
+        )
         return kwargs
 
     @staticmethod
     def get_kwargs_from_user_settings(user_settings: UserSettings):
-        kwargs = {}
-
-        for c in Org.__table__.columns:
-            # Normalize for lookup
-            normalized = (
-                c.name.removeprefix('_default_').removeprefix('default_').lstrip('_')
-            )
-
-            if not hasattr(user_settings, normalized):
-                continue
-
-            # ---- FIX: Output key should drop *only* leading "_" but preserve "default" ----
-            key = c.name
-            if key.startswith('_'):
-                key = key[1:]  # remove only the very first leading underscore
-
-            kwargs[key] = getattr(user_settings, normalized)
-
+        kwargs = {
+            field: getattr(user_settings, field)
+            for field in _ORG_SETTINGS_FIELDS
+            if hasattr(user_settings, field)
+        }
         kwargs['org_version'] = user_settings.user_version
+        kwargs['agent_settings'] = (
+            user_settings.to_settings().normalized_agent_settings(strip_secret_values=True)
+        )
         return kwargs

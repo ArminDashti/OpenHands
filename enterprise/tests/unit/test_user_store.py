@@ -152,6 +152,7 @@ def test_get_kwargs_from_settings():
     settings = Settings(
         language='es',
         enable_sound_notifications=True,
+        llm_model='anthropic/claude-sonnet-4-5-20250929',
         llm_api_key=SecretStr('test-key'),
     )
 
