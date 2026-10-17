@@ -1,5 +1,5 @@
-import React from "react";
 import { cn } from "#/utils/utils";
+import { Spinner } from "#/components/shared/spinner";
 
 interface LoadingSpinnerProps {
   hasSelection: boolean;

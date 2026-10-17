@@ -20,6 +20,7 @@ import { ToggleButton } from "../shared/toggle-button";
 import { ErrorMessage } from "../shared/error-message";
 import { BranchDropdownMenu } from "./branch-dropdown-menu";
 import BranchIcon from "#/icons/u-code-branch.svg?react";
+import { Spinner } from "#/components/shared/spinner";
 
 export interface GitBranchDropdownProps {
   repository: string | null;

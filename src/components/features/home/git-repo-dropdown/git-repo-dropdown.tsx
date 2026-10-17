@@ -25,6 +25,7 @@ import { I18nKey } from "#/i18n/declaration";
 import RepoIcon from "#/icons/repo.svg?react";
 import { useHomeStore } from "#/stores/home-store";
 import { Typography } from "#/ui/typography";
+import { Spinner } from "#/components/shared/spinner";
 
 export interface GitRepoDropdownProps {
   provider: Provider;
