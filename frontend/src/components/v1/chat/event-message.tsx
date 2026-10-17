@@ -51,10 +51,10 @@ export function EventMessage({
 
   const { data: config } = useConfig();
 
-  // V1 events use string IDs, but useFeedbackExists expects number
-  // For now, we'll skip feedback functionality for V1 events
-  const feedbackData = { exists: false };
-  const isCheckingFeedback = false;
+  const {
+    data: feedbackData = { exists: false },
+    isLoading: isCheckingFeedback,
+  } = useFeedbackExists(event.id);
 
   // Common props for components that need them
   const commonProps = {

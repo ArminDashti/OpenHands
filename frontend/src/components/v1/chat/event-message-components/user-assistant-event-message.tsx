@@ -6,8 +6,7 @@ import { ImageCarousel } from "../../../features/images/image-carousel";
 // import { FileList } from "../../../features/files/file-list";
 import { ConfirmationButtons } from "#/components/shared/buttons/confirmation-buttons";
 import { MicroagentStatusWrapper } from "../../../features/chat/event-message-components/microagent-status-wrapper";
-// TODO: Implement V1 LikertScaleWrapper when API supports V1 event IDs
-// import { LikertScaleWrapper } from "../../../features/chat/event-message-components/likert-scale-wrapper";
+import { LikertScaleWrapper } from "../../../features/chat/event-message-components/likert-scale-wrapper";
 import { parseMessageFromEvent } from "../event-content-helpers/parse-message-from-event";
 import { MicroagentStatus } from "#/types/microagent-status";
 
@@ -59,7 +58,16 @@ export function UserAssistantEventMessage({
         microagentPRUrl={microagentPRUrl}
         actions={actions}
       />
-      {/* LikertScaleWrapper expects V0 event types, skip for now */}
+      {event.source === "agent" && (
+        <LikertScaleWrapper
+          eventId={event.id}
+          isLastMessage={isLastMessage}
+          isInLast10Actions={isInLast10Actions}
+          config={config}
+          isCheckingFeedback={isCheckingFeedback}
+          feedbackData={feedbackData}
+        />
+      )}
     </>
   );
 }
