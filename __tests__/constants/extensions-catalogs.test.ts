@@ -100,4 +100,18 @@ describe("OpenHands extensions catalogs", () => {
       shipped.map((automation) => automation.id),
     );
   });
+
+  it("admits every setup experience the automation catalog ships", () => {
+    // Arrange — the pinned package is the whole source of setup manifests, and
+    // a shipped one that fails admission is dropped silently.
+    const shipped = AUTOMATION_CATALOG.filter(
+      (automation) => !!automation.setup,
+    );
+    expect(shipped.length).toBeGreaterThan(0);
+
+    // Act / Assert
+    expect(SETUP_REGISTRY.entries.map((entry) => entry.id)).toEqual(
+      shipped.map((automation) => automation.id),
+    );
+  });
 });

@@ -772,6 +772,86 @@ class AutomationService {
     return data;
   }
 
+  /**
+   * Ask what this deployment supports, before a setup form renders.
+   *
+   * The setup endpoints answer a contract authored in `OpenHands/extensions`,
+   * so their bodies are camelCase where the rest of this service is snake_case.
+   */
+  static async getCapabilities(): Promise<DeploymentCapabilities> {
+    const active = getActiveBackend().backend;
+    const path = `${AUTOMATION_BASE_PATH}/v1/capabilities`;
+
+    if (active.kind === "cloud") {
+      return callCloudProxy<DeploymentCapabilities>({
+        backend: active,
+        method: "GET",
+        path,
+        headers: await buildAutomationRequestHeaders(),
+      });
+    }
+
+    const { data } =
+      await localAutomationAxios.get<DeploymentCapabilities>(path);
+    return data;
+  }
+
+  /**
+   * Validate a draft without creating it. An invalid draft is a 200 carrying
+   * field-addressed errors; only a malformed envelope is a 4xx.
+   */
+  static async validateDraft(
+    body: SetupRequestBody,
+  ): Promise<ValidateDraftResponse> {
+    const active = getActiveBackend().backend;
+    const path = `${AUTOMATION_BASE_PATH}/v1/validate`;
+
+    if (active.kind === "cloud") {
+      return callCloudProxy<ValidateDraftResponse>({
+        backend: active,
+        method: "POST",
+        path,
+        body,
+        headers: await buildAutomationRequestHeaders(),
+      });
+    }
+
+    const { data } = await localAutomationAxios.post<ValidateDraftResponse>(
+      path,
+      body,
+    );
+    return data;
+  }
+
+  /**
+   * Create from a draft a setup form derived. Unlike {@link
+   * AutomationService.createAutomation}, which exists for import and has to
+   * park the record on a placeholder trigger, this sends the finished record in
+   * one request.
+   */
+  static async createAutomationDraft(
+    body: SetupRequestBody,
+  ): Promise<Record<string, unknown>> {
+    const active = getActiveBackend().backend;
+    const path = `${AUTOMATION_BASE_PATH}${AUTOMATION_CREATE_ENDPOINT}`;
+
+    if (active.kind === "cloud") {
+      return callCloudProxy<Record<string, unknown>>({
+        backend: active,
+        method: "POST",
+        path,
+        body,
+        headers: await buildAutomationRequestHeaders(),
+      });
+    }
+
+    const { data } = await localAutomationAxios.post<Record<string, unknown>>(
+      path,
+      body,
+    );
+    return data;
+  }
+
   static async checkHealth(): Promise<AutomationHealthResponse> {
     const active = getActiveBackend().backend;
     const path = `${AUTOMATION_BASE_PATH}${getAutomationEndpoint("health")}`;
