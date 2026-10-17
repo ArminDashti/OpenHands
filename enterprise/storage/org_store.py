@@ -15,6 +15,14 @@ from storage.user_settings import UserSettings
 from openhands.core.logger import openhands_logger as logger
 from openhands.storage.data_models.settings import Settings
 
+# Member-diff keys safe to overlay onto a *different* org variant (see
+# ``constrain_member_diff_to_org_kind``). ``llm`` and ``mcp_config`` are the
+# only fields shared by both variants with a compatible shape. ``agent_context``
+# is excluded on purpose: it is non-null on OpenHands but nullable on ACP, so
+# carrying it across variants reproduces the #14674 500. Fail-closed allowlist:
+# a future shared-but-type-divergent field is dropped, not forwarded.
+_CROSS_VARIANT_OVERLAY_KEYS: frozenset[str] = frozenset({'llm', 'mcp_config'})
+
 
 class OrgStore:
     """Store for managing organizations."""
