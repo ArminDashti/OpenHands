@@ -145,13 +145,15 @@ describe("OnboardingForm - SaaS Mode", () => {
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     expect(mockMutate).toHaveBeenCalledTimes(1);
-    expect(mockMutate).toHaveBeenCalledWith({
-      selections: {
-        org_size: "org_2_10",
-        use_case: ["new_features"],
-        role: "software_engineer",
-      },
-    });
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selections: {
+          org_size: "org_2_10",
+          use_case: ["new_features"],
+          role: "software_engineer",
+        },
+      }),
+    );
   });
 
   it("should track onboarding completion to PostHog in SaaS mode", async () => {
@@ -200,13 +202,15 @@ describe("OnboardingForm - SaaS Mode", () => {
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     // Verify all selections were preserved
-    expect(mockMutate).toHaveBeenCalledWith({
-      selections: {
-        org_size: "solo",
-        use_case: ["fixing_bugs"],
-        role: "cto_founder",
-      },
-    });
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selections: {
+          org_size: "solo",
+          use_case: ["fixing_bugs"],
+          role: "cto_founder",
+        },
+      }),
+    );
   });
 
   it("should allow selecting multiple options on multi-select steps", async () => {
@@ -227,13 +231,15 @@ describe("OnboardingForm - SaaS Mode", () => {
     await user.click(screen.getByTestId("step-option-software_engineer"));
     await user.click(screen.getByRole("button", { name: /finish/i }));
 
-    expect(mockMutate).toHaveBeenCalledWith({
-      selections: {
-        org_size: "solo",
-        use_case: ["new_features", "fixing_bugs", "refactoring"],
-        role: "software_engineer",
-      },
-    });
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selections: {
+          org_size: "solo",
+          use_case: ["new_features", "fixing_bugs", "refactoring"],
+          role: "software_engineer",
+        },
+      }),
+    );
   });
 
   it("should allow deselecting options on multi-select steps", async () => {
@@ -255,13 +261,15 @@ describe("OnboardingForm - SaaS Mode", () => {
     await user.click(screen.getByTestId("step-option-software_engineer"));
     await user.click(screen.getByRole("button", { name: /finish/i }));
 
-    expect(mockMutate).toHaveBeenCalledWith({
-      selections: {
-        org_size: "solo",
-        use_case: ["fixing_bugs"],
-        role: "software_engineer",
-      },
-    });
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selections: {
+          org_size: "solo",
+          use_case: ["fixing_bugs"],
+          role: "software_engineer",
+        },
+      }),
+    );
   });
 
   it("should show all progress bars filled on the last step", async () => {
@@ -515,5 +523,41 @@ describe("OnboardingForm - Self-Hosted Mode", () => {
     expect(screen.getByTestId("step-input-org_domain")).toHaveValue(
       "testcompany.com",
     );
+  });
+});
+
+describe("sanitizeReturnTo", () => {
+  it("should return / for null", () => {
+    expect(sanitizeReturnTo(null)).toBe("/");
+  });
+
+  it("should return / for empty string", () => {
+    expect(sanitizeReturnTo("")).toBe("/");
+  });
+
+  it("should allow same-origin absolute paths", () => {
+    expect(sanitizeReturnTo("/conversations/abc")).toBe("/conversations/abc");
+  });
+
+  it("should allow paths with query strings", () => {
+    expect(sanitizeReturnTo("/conversations/abc?foo=bar")).toBe(
+      "/conversations/abc?foo=bar",
+    );
+  });
+
+  it("should prepend / to relative paths that lack one", () => {
+    expect(sanitizeReturnTo("conversations/abc")).toBe("/conversations/abc");
+  });
+
+  it("should reject http:// URLs and fall back to /", () => {
+    expect(sanitizeReturnTo("http://evil.example.com/pwn")).toBe("/");
+  });
+
+  it("should reject https:// URLs and fall back to /", () => {
+    expect(sanitizeReturnTo("https://evil.example.com/pwn")).toBe("/");
+  });
+
+  it("should reject protocol-relative URLs and fall back to /", () => {
+    expect(sanitizeReturnTo("//evil.example.com/pwn")).toBe("/");
   });
 });
