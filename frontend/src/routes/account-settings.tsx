@@ -353,6 +353,15 @@ function AccountSettings() {
                 </SettingsSwitch>
               )}
 
+              <SettingsSwitch
+                testId="enable-repository-memory-switch"
+                name="enable-repository-memory-switch"
+                defaultIsToggled={!!settings.ENABLE_REPOSITORY_MEMORY}
+                tooltip={t(I18nKey.SETTINGS$LONGTERM_MEMORY_TOOLTIP)}
+              >
+                {t(I18nKey.SETTINGS$LONGTERM_MEMORY)}
+              </SettingsSwitch>
+
               {llmConfigMode === "advanced" && confirmationModeIsEnabled && (
                 <div>
                   <SettingsDropdownInput
