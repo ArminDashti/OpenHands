@@ -43,7 +43,7 @@ Every event also carries: `app_mode` (saas/oss), `is_feature_env`, and `org_id` 
 
 | Action | When | What's Set |
 |---|---|---|
-| **Identify user** | Login (Keycloak or device auth) | Person: `email`, `org_id`, `org_name`, `idp`, `last_login_at`. Group (org): `org_name`, `member_count`. |
+| **Identify user** | Login (Keycloak or device auth) | Person: `email`, `org_id`, `org_name`, `idp`, `last_login_at`, `first_name`, `last_name`. Group (org): `org_name`, `member_count`. |
 | **Update person** | Signup, org switch | `signed_up_at` on signup; `org_id`, `org_name` on org switch |
 | **Update org group** | Login, onboarding | `member_count`, `onboarding_completed_at` |
 
@@ -91,6 +91,12 @@ Conversation starts →  conversation created
 
 Credit purchase     →  credit purchased
 Org switch          →  person properties updated (no event)
+
+API key created     →  api key created
+CLI login           →  cli device linked
+PR created          →  pull request created
+Slack linked        →  slack integration enabled
+Jira linked         →  jira integration enabled
 ```
 
 ---
