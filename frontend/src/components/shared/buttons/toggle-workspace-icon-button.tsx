@@ -14,20 +14,24 @@ export function ToggleWorkspaceIconButton({
     <IconButton
       icon={
         isHidden ? (
-          <IoIosArrowForward
-            size={20}
+          <IoIosArrowBack
+            size={10}
             className="text-neutral-400 hover:text-neutral-100 transition"
+            data-testid="arrow-back-icon"
           />
         ) : (
-          <IoIosArrowBack
-            size={20}
+          <IoIosArrowForward
+            size={10}
             className="text-neutral-400 hover:text-neutral-100 transition"
+            data-testid="arrow-forward-icon"
           />
         )
       }
       testId="toggle"
       ariaLabel={isHidden ? "Open workspace" : "Close workspace"}
+      title={isHidden ? "Open workspace" : "Close workspace"}
       onClick={onClick}
+      className="h-[80px] w-[8px] bg-neutral-800 hover:bg-neutral-700 rounded-md"
     />
   );
 }
