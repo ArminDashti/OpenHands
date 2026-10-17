@@ -253,7 +253,7 @@ class ActionExecutionClient(Runtime):
                 with self._send_action_server_request(
                     'POST',
                     f'{self._get_action_execution_server_host()}/execute_action',
-                    json={'action': event_to_dict(action)},
+                    json=execution_action_body,
                     # wait a few more seconds to get the timeout error from client side
                     timeout=action.timeout + 5,
                 ) as response:
@@ -282,6 +282,9 @@ class ActionExecutionClient(Runtime):
         return self.send_action_for_execution(action)
 
     def browse_interactive(self, action: BrowseInteractiveAction) -> Observation:
+        return self.send_action_for_execution(action)
+
+    def call_tool_mcp(self, action: McpAction) -> Observation:
         return self.send_action_for_execution(action)
 
     def close(self) -> None:

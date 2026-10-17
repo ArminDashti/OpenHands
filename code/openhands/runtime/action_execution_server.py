@@ -7,6 +7,7 @@ NOTE: this will be executed inside the docker sandbox.
 import argparse
 import asyncio
 import base64
+import json
 import mimetypes
 import os
 import re
@@ -33,6 +34,7 @@ from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from uvicorn import run
 
+from openhands.core.config.mcp_config import MCPStdioConfigEntry
 from openhands.core.exceptions import BrowserUnavailableException
 from openhands.core.logger import openhands_logger as logger
 from openhands.events.action import (
@@ -45,6 +47,7 @@ from openhands.events.action import (
     FileWriteAction,
     IPythonRunCellAction,
 )
+from openhands.events.action.mcp import McpAction
 from openhands.events.event import FileEditSource, FileReadSource
 from openhands.events.observation import (
     CmdOutputMetadata,
@@ -56,7 +59,9 @@ from openhands.events.observation import (
     IPythonRunCellObservation,
     Observation,
 )
+from openhands.events.observation.mcp import MCPObservation
 from openhands.events.serialization import event_from_dict, event_to_dict
+from openhands.mcp import create_mcp_clients
 from openhands.runtime.browser import browse
 from openhands.runtime.browser.browser_env import BrowserEnv
 from openhands.runtime.file_viewer_server import start_file_viewer_server
@@ -73,6 +78,8 @@ from openhands.utils.async_utils import call_sync_from_async
 
 class ActionRequest(BaseModel):
     action: dict
+    sse_mcp_config: list[str] | None = None
+    stdio_mcp_tool_configs: dict[str, MCPStdioConfigEntry] | None = None
 
 
 ROOT_GID = 0
@@ -185,10 +192,19 @@ class ActionExecutor:
             in ['true', '1', 'yes']
         )
         self.memory_monitor.start_monitoring()
+        self.sse_mcp_servers: list[str] = []
+        self.stdio_mcp_tool_configs: dict[str, MCPStdioConfigEntry] = {}
 
     @property
     def initial_cwd(self):
         return self._initial_cwd
+
+    def process_request(self, action_request: ActionRequest):
+        # update the sse_mcp_servers and stdio_mcp_tool_configs to prepare for MCP action if needed
+        if action_request.sse_mcp_config:
+            self.sse_mcp_servers = action_request.sse_mcp_config
+        if action_request.stdio_mcp_tool_configs:
+            self.stdio_mcp_tool_configs = action_request.stdio_mcp_tool_configs
 
     async def _init_browser_async(self):
         """Initialize the browser asynchronously."""
@@ -568,6 +584,39 @@ class ActionExecutor:
     async def browse_interactive(self, action: BrowseInteractiveAction) -> Observation:
         await self._ensure_browser_ready()
         return await browse(action, self.browser)
+
+    async def call_tool_mcp(self, action: McpAction) -> Observation:
+        if not self.sse_mcp_servers and not self.stdio_mcp_tool_configs:
+            raise ValueError('No MCP servers or stdio MCP config found')
+
+        logger.warning(f'SSE MCP servers: {self.sse_mcp_servers}')
+        mcp_clients = await create_mcp_clients(
+            self.sse_mcp_servers,
+            self.stdio_mcp_tool_configs,
+        )
+        logger.warn(f'MCP action received: {action}')
+        # Find the MCP agent that has the matching tool name
+        matching_client = None
+        logger.warning(f'MCP clients: {mcp_clients}')
+        logger.warning(f'MCP action name: {action.name}')
+        for client in mcp_clients:
+            if action.name in [tool.name for tool in client.tools]:
+                matching_client = client
+                break
+        if matching_client is None:
+            raise ValueError(
+                f'No matching MCP agent found for tool name: {action.name}'
+            )
+        logger.warning(f'Matching client: {matching_client}')
+        args_dict = json.loads(action.arguments) if action.arguments else {}
+        response = await matching_client.call_tool(action.name, args_dict)
+        logger.warning(f'MCP response: {response}')
+
+        # close client connections
+        for client in mcp_clients:
+            await client.disconnect()
+
+        return MCPObservation(content=f'MCP result:{response.model_dump(mode="json")}')
 
     def close(self):
         self.memory_monitor.stop_monitoring()

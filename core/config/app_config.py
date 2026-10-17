@@ -9,6 +9,7 @@ from openhands.core.config.config_utils import (
     get_field_info,
 )
 from openhands.core.config.llm_config import LLMConfig
+from openhands.core.config.mcp_config import MCPConfig
 from openhands.core.config.sandbox_config import SandboxConfig
 from openhands.core.config.search_config import SearchConfig
 from openhands.core.config.security_config import SecurityConfig

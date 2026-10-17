@@ -20,6 +20,7 @@ from openhands.events.observation.error import ErrorObservation
 from openhands.events.serialization import event_from_dict, event_to_dict
 from openhands.events.stream import EventStreamSubscriber
 from openhands.llm.llm import LLM
+from openhands.mcp import fetch_mcp_tools_from_config
 from openhands.server.session.agent_session import AgentSession
 from openhands.server.session.session_init_data import SessionInitData
 from openhands.storage.files import FileStore
@@ -95,6 +96,7 @@ class Session:
         llm = LLM(config=self.config.get_llm_config_from_agent(agent_cls))
         agent_config = self.config.get_agent_config(agent_cls)
         agent = Agent.get_cls(agent_cls)(llm, agent_config)
+        agent.set_mcp_tools(mcp_tools)
 
         try:
             await self.agent_session.start(
