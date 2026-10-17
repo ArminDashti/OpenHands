@@ -1,13 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { BudgetDisplay } from "../../conversation-panel/budget-display";
 import { I18nKey } from "#/i18n/declaration";
 
 interface CostSectionProps {
   cost: number | null;
-  maxBudgetPerTask: number | null;
 }
 
-export function CostSection({ cost, maxBudgetPerTask }: CostSectionProps) {
+export function CostSection({ cost }: CostSectionProps) {
   const { t } = useTranslation("openhands");
 
   if (cost === null) {
