@@ -21,8 +21,11 @@ from openhands.events.stream import EventStream
 from openhands.integrations.provider import (
     CUSTOM_SECRETS_TYPE,
     PROVIDER_TOKEN_TYPE,
+    CustomSecret,
     ProviderHandler,
+    ProviderToken,
 )
+from openhands.integrations.service_types import ProviderType
 from openhands.llm.llm_registry import LLMRegistry
 from openhands.mcp import add_mcp_tools_to_agent
 from openhands.memory.memory import Memory
@@ -296,19 +299,37 @@ class AgentSession:
         git_provider_tokens: PROVIDER_TOKEN_TYPE | None,
         custom_secrets: CUSTOM_SECRETS_TYPE | None,
     ):
-        if git_provider_tokens and custom_secrets:
-            # Use dictionary comprehension to avoid modifying dictionary during iteration
-            tokens = {
-                provider: token
-                for provider, token in git_provider_tokens.items()
-                if not (
-                    ProviderHandler.get_provider_env_key(provider) in custom_secrets
-                    or ProviderHandler.get_provider_env_key(provider).upper()
-                    in custom_secrets
+        if not git_provider_tokens or not custom_secrets:
+            return git_provider_tokens
+
+        # Create a case-insensitive mapping from custom secret keys to their values
+        # Key: lowercase env key (e.g., 'github_token'), Value: (original_key, CustomSecret)
+        custom_secrets_map: dict[str, tuple[str, CustomSecret]] = {}
+        for key, custom_secret in custom_secrets.items():
+            key_lower = key.lower()
+            custom_secrets_map[key_lower] = (key, custom_secret)
+
+        # Build the overridden tokens dictionary
+        tokens: dict[ProviderType, ProviderToken] = {}
+
+        for provider, provider_token in git_provider_tokens.items():
+            provider_env_key = ProviderHandler.get_provider_env_key(provider)
+            provider_env_key_lower = provider_env_key.lower()
+
+            # Check if a custom secret exists for this provider (case-insensitive)
+            if provider_env_key_lower in custom_secrets_map:
+                # Override with custom secret value
+                _, custom_secret = custom_secrets_map[provider_env_key_lower]
+                tokens[provider] = ProviderToken(
+                    token=custom_secret.secret,
+                    user_id=provider_token.user_id,  # Preserve user_id from original token
+                    host=provider_token.host,  # Preserve host from original token
                 )
-            }
-            return MappingProxyType(tokens)
-        return git_provider_tokens
+            else:
+                # Keep the original provider token
+                tokens[provider] = provider_token
+
+        return MappingProxyType(tokens)
 
     async def _create_runtime(
         self,
