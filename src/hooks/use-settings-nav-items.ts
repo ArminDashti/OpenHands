@@ -17,6 +17,14 @@ export type SettingsNavRenderedItem =
   | { type: "header"; text: I18nKey }
   | { type: "divider" };
 
+/**
+ * The settings navigation, driven by the nav/page registry. Rather than
+ * filtering a hard-coded list with inline `backend.kind` / feature-flag
+ * conditionals, this returns whatever pages are registered and visible in the
+ * current {@link useSettingsContext} — so backend-specific (and, later,
+ * plugin-contributed) pages appear by registration instead of by editing this
+ * hook.
+ */
 export function useSettingsNavItems(): SettingsNavRenderedItem[] {
   const { data: config } = useConfig();
   const { backend } = useActiveBackend();

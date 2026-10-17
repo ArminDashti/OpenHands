@@ -27,8 +27,16 @@ import { formatModelNameForDisplay } from "#/utils/format-model-name";
 import { formControlMultilineFieldClassName } from "#/utils/form-control-classes";
 import { cn } from "#/utils/utils";
 
-const AUTOMATIC_TITLE_LLM_PROFILE_KEY = "__automatic__";
+const APP_SETTINGS_PAGE = "/settings/app";
 
+/**
+ * Host for the Application settings page. Rather than rendering a fixed
+ * sequence of controls, it renders whatever sections are registered for this
+ * page and visible in the current {@link useSettingsContext} — so
+ * backend-specific (and, later, plugin-contributed) sections can be added by
+ * registration instead of by editing this file. Each section owns its own
+ * persistence.
+ */
 export function AppSettingsScreen() {
   const { t } = useTranslation("openhands");
 
