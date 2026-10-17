@@ -13,7 +13,7 @@ from openhands.events.action import (
 from openhands.events.event import EventSource
 from openhands.events.observation import BrowserOutputObservation
 from openhands.events.observation.observation import Observation
-from openhands.llm.llm import LLM
+from openhands.llm.llm_registry import LLMRegistry
 from openhands.runtime.plugins import (
     PluginRequirement,
 )
@@ -122,17 +122,13 @@ class VisualBrowsingAgent(Agent):
     sandbox_plugins: list[PluginRequirement] = []
     response_parser = BrowsingResponseParser()
 
-    def __init__(
-        self,
-        llm: LLM,
-        config: AgentConfig,
-    ) -> None:
+    def __init__(self, config: AgentConfig, llm_registry: LLMRegistry) -> None:
         """Initializes a new instance of the VisualBrowsingAgent class.
 
         Parameters:
         - llm (LLM): The llm to be used by this agent
         """
-        super().__init__(llm, config)
+        super().__init__(config, llm_registry)
         # define a configurable action space, with chat functionality, web navigation, and webpage grounding using accessibility tree and HTML.
         # see Browser-Use documentation for more details on available actions
         action_subsets = [
