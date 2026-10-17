@@ -8,6 +8,27 @@ from server.config import get_config
 
 _jwt_service = None
 _fernet = None
+_settings_cipher = None
+_FERNET_TOKEN_PREFIX = 'gAAAA'
+
+
+class _SettingsReadCipher:
+    def __init__(self, cipher):
+        self._cipher = cipher
+
+    def encrypt(self, secret: SecretStr | None) -> str | None:
+        return self._cipher.encrypt(secret)
+
+    def decrypt(self, secret: str | None) -> SecretStr | None:
+        if secret is None:
+            return None
+        if not secret.startswith(_FERNET_TOKEN_PREFIX):
+            return SecretStr(secret)
+        decrypted = self._cipher.try_decrypt_str(secret)
+        return SecretStr(decrypted if decrypted is not None else secret)
+
+    def try_decrypt_str(self, secret: str) -> str | None:
+        return self._cipher.try_decrypt_str(secret)
 
 
 def encrypt_model(encrypt_keys: list, model_instance) -> dict:
@@ -68,6 +89,26 @@ def get_jwt_service():
         assert jwt_service_injector is not None
         _jwt_service = jwt_service_injector.get_jwt_service()
     return _jwt_service
+
+
+def get_settings_cipher():
+    """Return the SDK cipher used for field-level settings encryption."""
+    from openhands.sdk.utils.cipher import Cipher
+
+    global _settings_cipher
+    if _settings_cipher is None:
+        jwt_svc = get_jwt_service()
+        default_key = jwt_svc.get_key(jwt_svc._default_key_id)
+        _settings_cipher = Cipher(default_key.key.get_secret_value())
+    return _settings_cipher
+
+
+def get_settings_cipher_context() -> dict[str, Any]:
+    return {'cipher': _SettingsReadCipher(get_settings_cipher())}
+
+
+def get_settings_storage_context() -> dict[str, Any]:
+    return {'expose_secrets': 'encrypted', 'cipher': get_settings_cipher()}
 
 
 def decrypt_legacy_model(decrypt_keys: list, model_instance) -> dict:
