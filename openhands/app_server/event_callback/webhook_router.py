@@ -116,7 +116,7 @@ async def on_conversation_update(
         selected_repository=existing.selected_repository,
         selected_branch=existing.selected_branch,
         git_provider=existing.git_provider,
-        trigger=existing.trigger,
+        trigger=trigger,
         pr_number=existing.pr_number,
     )
     await app_conversation_info_service.save_app_conversation_info(
