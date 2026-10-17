@@ -19,6 +19,7 @@ from openhands.agenthub.codeact_agent.tools import (
     WebReadTool,
     create_cmd_run_tool,
     create_str_replace_editor_tool,
+    ApplyPatchTool,
 )
 from openhands.agenthub.planning_agent.tools import (
     DelegateToCodeActAgentTool,
@@ -178,7 +179,7 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                 )
 
             # ================================================
-            # LLMBasedFileEditTool (LLM-based file editor, deprecated)
+            # LLMBasedFileEditTool (LLM-based file editor)
             # ================================================
             elif tool_call.function.name == LLMBasedFileEditTool['function']['name']:
                 if 'path' not in arguments:
@@ -274,6 +275,16 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                         impl_source=FileEditSource.OH_ACI,
                         **other_kwargs,
                     )
+            elif tool_call.function.name == 'apply_patch':
+                if 'input' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "input" in tool call {tool_call.function.name}'
+                    )
+                action = FileEditAction(
+                    path=path,
+                    command=arguments['input'],
+                    impl_source=FileEditSource.OH_ACI,
+                )
             # ================================================
             # AgentThinkAction
             # ================================================
