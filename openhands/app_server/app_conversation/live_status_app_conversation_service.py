@@ -532,7 +532,10 @@ class LiveStatusAppConversationService(GitAppConversationService):
             async for updated_task in self.run_setup_scripts(task, workspace):
                 yield updated_task
 
-            # Build the start request
+            # Build the full start request (including initial_message with
+            # plugin params incorporated), but we'll send it WITHOUT the
+            # initial_message so we can run setup.sh through the terminal
+            # tool before the agent starts
             start_conversation_request = (
                 await self._build_start_conversation_request_for_user(
                     request.initial_message,
@@ -546,6 +549,12 @@ class LiveStatusAppConversationService(GitAppConversationService):
                     remote_workspace,
                     start_conversation_request,
                 )
+
+            # Save the finalized initial message (with plugin params) and
+            # strip it from the start request so the conversation is created
+            # without triggering the agent loop
+            deferred_initial_message = start_conversation_request.initial_message
+            start_conversation_request.initial_message = None
 
             # update status
             task.status = AppConversationStartTaskStatus.STARTING_CONVERSATION
