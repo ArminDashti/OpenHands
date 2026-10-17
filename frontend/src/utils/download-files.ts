@@ -53,6 +53,9 @@ async function getAllFiles(
 
     const fullPath = path + entry;
     if (entry.endsWith("/")) {
+      if (entry === "node_modules/") {
+        return [];
+      }
       const subEntries = await OpenHands.getFiles(conversationID, fullPath);
       const subFilesPromises = subEntries.map((subEntry) =>
         processEntry(subEntry),
