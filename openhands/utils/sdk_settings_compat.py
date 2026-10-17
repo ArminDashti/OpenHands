@@ -6,17 +6,27 @@ try:
     from openhands.sdk.settings import (  # type: ignore[attr-defined]
         ACPAgentSettings,
         AgentSettingsConfig,
-        LLMAgentSettings,
         default_agent_settings,
         export_agent_settings_schema,
         validate_agent_settings,
     )
 
+    try:
+        from openhands.sdk.settings import (  # type: ignore[attr-defined]
+            OpenHandsAgentSettings,
+        )
+    except ImportError:
+        from openhands.sdk.settings import (  # type: ignore[attr-defined, misc, assignment, no-redef]
+            LLMAgentSettings as OpenHandsAgentSettings,
+        )
+
+    LLMAgentSettings = OpenHandsAgentSettings
     _HAS_DISCRIMINATED_UNION = True
 except ImportError:
     _HAS_DISCRIMINATED_UNION = False
     from openhands.sdk.settings import AgentSettings
 
+    OpenHandsAgentSettings = AgentSettings  # type: ignore[misc, assignment]
     LLMAgentSettings = AgentSettings  # type: ignore[misc, assignment]
 
     class _ACPAgentSettingsStub:
@@ -46,6 +56,7 @@ __all__ = [
     'ACPAgentSettings',
     'AgentSettingsConfig',
     'LLMAgentSettings',
+    'OpenHandsAgentSettings',
     '_HAS_DISCRIMINATED_UNION',
     'default_agent_settings',
     'export_agent_settings_schema',
