@@ -47,6 +47,26 @@ class AuthService {
       appMode === "saas" ? "/api/logout" : "/api/unset-provider-tokens";
     await openHands.post(endpoint);
   }
+
+  /**
+   * Verify reCAPTCHA token with the backend
+   * @param token The reCAPTCHA token to verify
+   * @returns Response indicating if verification was successful
+   */
+  static async verifyRecaptcha(token: string): Promise<{
+    success: boolean;
+    error?: string;
+    error_codes?: string[];
+  }> {
+    const { data } = await openHands.post<{
+      success: boolean;
+      error?: string;
+      error_codes?: string[];
+    }>("/api/verify-recaptcha", {
+      token,
+    });
+    return data;
+  }
 }
 
 export default AuthService;
