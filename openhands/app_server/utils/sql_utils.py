@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from pydantic import SecretStr, TypeAdapter
 from sqlalchemy import JSON, DateTime, String, TypeDecorator
@@ -10,8 +10,13 @@ Base = declarative_base()
 T = TypeVar('T', bound=Enum)
 
 
-def create_json_type_decorator(object_type: type):
-    """Create a decorator for a particular type. Introduced because SQLAlchemy could not process lists of enum values."""
+def create_json_type_decorator(object_type: Any):
+    """Create a decorator for a particular type. Introduced because SQLAlchemy could not process lists of enum values.
+
+    ``object_type`` accepts anything ``pydantic.TypeAdapter`` understands —
+    concrete classes, generic aliases (``list[int]``) and unions
+    (``Model | None``).
+    """
     type_adapter: TypeAdapter = TypeAdapter(object_type)
 
     class JsonTypeDecorator(TypeDecorator):

@@ -89,6 +89,25 @@ class StoredConversationMetadata(Base):  # type: ignore
     conversation_version = Column(String, nullable=False, default='V0', index=True)
     sandbox_id = Column(String, nullable=True, index=True)
 
+    # Snapshot of the ACP agent spec, frozen at conversation creation so a later
+    # edit to the user's global agent settings can't silently re-target an
+    # in-flight conversation when its sandbox is recycled and rebuilt (#1015).
+    # Secret-bearing fields are stripped before persisting (provider creds etc.
+    # are re-resolved from the live encrypted vault on every build), so this
+    # plain JSON column never holds secrets at rest (#1016). NULL for non-ACP
+    # conversations and for ACP conversations created before this column landed.
+    acp_agent_settings_snapshot: Mapped[ACPAgentSettings | None] = mapped_column(
+        create_json_type_decorator(ACPAgentSettings | None), nullable=True
+    )
+
+    # Durable mirror of the ACP CLI session identity (harvested from the
+    # agent_state webhook stream). Survives sandbox recycles so the rebuild
+    # can feed ACPAgent.acp_resume_session_id for native session/load resume
+    # (#14506 / #1126). NULL for non-ACP conversations.
+    acp_session_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    acp_session_cwd: Mapped[str | None] = mapped_column(String, nullable=True)
+    acp_agent_version: Mapped[str | None] = mapped_column(String, nullable=True)
+
 
 @dataclass
 class SQLAppConversationInfoService(AppConversationInfoService):

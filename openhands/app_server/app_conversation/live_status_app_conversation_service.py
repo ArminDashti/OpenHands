@@ -17,6 +17,10 @@ from openhands.agent_server.models import (
     SendMessageRequest,
     StartConversationRequest,
 )
+from openhands.app_server.app_conversation.acp_session_snapshot_service import (
+    AcpSessionSnapshotService,
+    supports_native_session_resume,
+)
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
 )
