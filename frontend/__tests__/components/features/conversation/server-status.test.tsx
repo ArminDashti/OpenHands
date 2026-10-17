@@ -37,14 +37,14 @@ vi.mock("react-redux", () => ({
 const mockStartConversationMutate = vi.fn();
 const mockStopConversationMutate = vi.fn();
 
-vi.mock("#/hooks/mutation/use-start-conversation", () => ({
-  useStartConversation: () => ({
+vi.mock("#/hooks/mutation/use-unified-start-conversation", () => ({
+  useUnifiedStartConversation: () => ({
     mutate: mockStartConversationMutate,
   }),
 }));
 
-vi.mock("#/hooks/mutation/use-stop-conversation", () => ({
-  useStopConversation: () => ({
+vi.mock("#/hooks/mutation/use-unified-stop-conversation", () => ({
+  useUnifiedStopConversation: () => ({
     mutate: mockStopConversationMutate,
   }),
 }));
@@ -58,6 +58,19 @@ vi.mock("#/hooks/use-conversation-id", () => ({
 vi.mock("#/hooks/use-user-providers", () => ({
   useUserProviders: () => ({
     providers: [],
+  }),
+}));
+
+vi.mock("#/hooks/query/use-task-polling", () => ({
+  useTaskPolling: () => ({
+    isTask: false,
+    taskId: null,
+    conversationId: "test-conversation-id",
+    task: null,
+    taskStatus: null,
+    taskDetail: null,
+    taskError: null,
+    isLoadingTask: false,
   }),
 }));
 
@@ -93,20 +106,42 @@ describe("ServerStatus", () => {
   it("should render server status with different conversation statuses", () => {
     // Test RUNNING status
     const { rerender } = renderWithProviders(
-      <ServerStatus conversationStatus="RUNNING" />,
+      <ServerStatus
+        conversationStatus="RUNNING"
+        handleStop={mockHandleStop}
+        handleResumeAgent={mockHandleResumeAgent}
+      />,
     );
     expect(screen.getByText("Running")).toBeInTheDocument();
 
     // Test STOPPED status
-    rerender(<ServerStatus conversationStatus="STOPPED" />);
+    rerender(
+      <ServerStatus
+        conversationStatus="STOPPED"
+        handleStop={mockHandleStop}
+        handleResumeAgent={mockHandleResumeAgent}
+      />,
+    );
     expect(screen.getByText("Server Stopped")).toBeInTheDocument();
 
     // Test STARTING status (shows "Running" due to agent state being RUNNING)
-    rerender(<ServerStatus conversationStatus="STARTING" />);
+    rerender(
+      <ServerStatus
+        conversationStatus="STARTING"
+        handleStop={mockHandleStop}
+        handleResumeAgent={mockHandleResumeAgent}
+      />,
+    );
     expect(screen.getByText("Running")).toBeInTheDocument();
 
     // Test null status (shows "Running" due to agent state being RUNNING)
-    rerender(<ServerStatus conversationStatus={null} />);
+    rerender(
+      <ServerStatus
+        conversationStatus={null}
+        handleStop={mockHandleStop}
+        handleResumeAgent={mockHandleResumeAgent}
+      />,
+    );
     expect(screen.getByText("Running")).toBeInTheDocument();
   });
 
@@ -161,7 +196,7 @@ describe("ServerStatus", () => {
     const user = userEvent.setup();
 
     // Clear previous calls
-    mockStopConversationMutate.mockClear();
+    mockHandleStop.mockClear();
 
     renderWithProviders(<ServerStatus conversationStatus="RUNNING" />);
 
@@ -171,16 +206,14 @@ describe("ServerStatus", () => {
     const stopButton = screen.getByTestId("stop-server-button");
     await user.click(stopButton);
 
-    expect(mockStopConversationMutate).toHaveBeenCalledWith({
-      conversationId: "test-conversation-id",
-    });
+    expect(mockHandleStop).toHaveBeenCalledTimes(1);
   });
 
   it("should call start conversation mutation when start server is clicked", async () => {
     const user = userEvent.setup();
 
     // Clear previous calls
-    mockStartConversationMutate.mockClear();
+    mockHandleResumeAgent.mockClear();
 
     renderWithProviders(<ServerStatus conversationStatus="STOPPED" />);
 
@@ -190,10 +223,7 @@ describe("ServerStatus", () => {
     const startButton = screen.getByTestId("start-server-button");
     await user.click(startButton);
 
-    expect(mockStartConversationMutate).toHaveBeenCalledWith({
-      conversationId: "test-conversation-id",
-      providers: [],
-    });
+    expect(mockHandleResumeAgent).toHaveBeenCalledTimes(1);
   });
 
   it("should close context menu after stop server action", async () => {
@@ -207,9 +237,7 @@ describe("ServerStatus", () => {
     await user.click(stopButton);
 
     // Context menu should be closed (handled by the component)
-    expect(mockStopConversationMutate).toHaveBeenCalledWith({
-      conversationId: "test-conversation-id",
-    });
+    expect(mockHandleStop).toHaveBeenCalledTimes(1);
   });
 
   it("should close context menu after start server action", async () => {

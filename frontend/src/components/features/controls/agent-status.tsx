@@ -41,6 +41,7 @@ export function AgentStatus({
   );
 
   const shouldShownAgentLoading =
+    isPausing ||
     curAgentState === AgentState.INIT ||
     curAgentState === AgentState.LOADING ||
     webSocketStatus === "CONNECTING";

@@ -149,6 +149,12 @@ export function ConversationName() {
         )}
 
         {titleMode !== "edit" && (
+          <ConversationVersionBadge
+            version={conversation.conversation_version}
+          />
+        )}
+
+        {titleMode !== "edit" && (
           <div className="relative flex items-center">
             <EllipsisButton fill="#B1B9D3" onClick={handleEllipsisClick} />
             {contextMenuOpen && (
