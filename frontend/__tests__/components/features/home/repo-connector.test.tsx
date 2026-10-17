@@ -84,7 +84,7 @@ describe("RepoConnector", () => {
     });
   });
 
-  it("should only enable the launch button if a repo is selected", async () => {
+  it("should only enable the launch button if a repo and branch are selected", async () => {
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
       GitService,
       "retrieveUserGitRepositories",
@@ -103,8 +103,12 @@ describe("RepoConnector", () => {
     const dropdown = await waitFor(() => screen.getByTestId("repo-dropdown"));
     await userEvent.click(dropdown);
     await userEvent.click(screen.getByText("rbren/polaris"));
-
-    expect(launchButton).toBeEnabled();
+    
+    // With the new branch selection logic, main branch should be auto-selected
+    // Wait for the branch to be auto-selected
+    await waitFor(() => {
+      expect(launchButton).toBeEnabled();
+    });
   });
 
   it("should render the 'add git(hub|lab) repos' links if saas mode", async () => {
@@ -161,6 +165,12 @@ describe("RepoConnector", () => {
 
     const repoOption = screen.getByText("rbren/polaris");
     await userEvent.click(repoOption);
+    
+    // Wait for the branch to be auto-selected
+    await waitFor(() => {
+      expect(launchButton).toBeEnabled();
+    });
+    
     await userEvent.click(launchButton);
 
     expect(createConversationSpy).toHaveBeenCalledExactlyOnceWith(
@@ -194,10 +204,19 @@ describe("RepoConnector", () => {
     const dropdown = await waitFor(() => screen.getByTestId("repo-dropdown"));
     await userEvent.click(dropdown);
     await userEvent.click(screen.getByText("rbren/polaris"));
+    
+    // Wait for the branch to be auto-selected and button to be enabled
+    await waitFor(() => {
+      expect(launchButton).toBeEnabled();
+    });
 
     await userEvent.click(launchButton);
-    expect(launchButton).toBeDisabled();
-    expect(launchButton).toHaveTextContent(/Loading/i);
+    
+    // Check for loading state
+    await waitFor(() => {
+      expect(launchButton).toBeDisabled();
+      expect(launchButton).toHaveTextContent(/Loading/i);
+    });
   });
 
   it("should not display a button to settings if the user is signed in with their git provider", async () => {
