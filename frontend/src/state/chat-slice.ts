@@ -6,6 +6,7 @@ import {
   OpenHandsObservation,
   CommandObservation,
   IPythonObservation,
+  RecallObservation,
 } from "#/types/core/observations";
 import { OpenHandsAction } from "#/types/core/actions";
 import { OpenHandsEventType } from "#/types/core/base";
@@ -162,6 +163,82 @@ export const chatSlice = createSlice({
       if (!HANDLED_ACTIONS.includes(observationID)) {
         return;
       }
+
+      // Special handling for RecallObservation - create a new message instead of updating an existing one
+      if (observationID === "recall") {
+        const recallObs = observation.payload as RecallObservation;
+        let content = ``;
+
+        // Handle workspace context
+        if (recallObs.extras.recall_type === "workspace_context") {
+          if (recallObs.extras.repo_name) {
+            content += `\n\n**Repository:** ${recallObs.extras.repo_name}`;
+          }
+          if (recallObs.extras.repo_directory) {
+            content += `\n\n**Directory:** ${recallObs.extras.repo_directory}`;
+          }
+          if (recallObs.extras.date) {
+            content += `\n\n**Date:** ${recallObs.extras.date}`;
+          }
+          if (
+            recallObs.extras.runtime_hosts &&
+            Object.keys(recallObs.extras.runtime_hosts).length > 0
+          ) {
+            content += `\n\n**MicroAgent: Available Hosts**`;
+            for (const [host, port] of Object.entries(
+              recallObs.extras.runtime_hosts,
+            )) {
+              content += `\n\n- ${host} (port ${port})`;
+            }
+          }
+          if (recallObs.extras.repo_instructions) {
+            content += `\n\n**Repository Instructions:**\n\n${recallObs.extras.repo_instructions}`;
+          }
+          if (recallObs.extras.additional_agent_instructions) {
+            content += `\n\n**Additional Instructions:**\n\n${recallObs.extras.additional_agent_instructions}`;
+          }
+        }
+
+        // Create a new message for the observation
+        // Use the correct translation ID format that matches what's in the i18n file
+        const translationID = `OBSERVATION_MESSAGE$${observationID.toUpperCase()}`;
+
+        // Handle microagent knowledge and prepare custom title if needed
+        let customTitle = translationID;
+        if (
+          recallObs.extras.microagent_knowledge &&
+          recallObs.extras.microagent_knowledge.length > 0
+        ) {
+          // Extract microagent names for the title
+          const microagentNames = recallObs.extras.microagent_knowledge
+            .map((k) => k.name)
+            .join(", ");
+
+          // Create custom title with microagent names
+          customTitle = `${translationID}: ${microagentNames}`;
+
+          content += `\n\n**Triggered Microagent Knowledge:**`;
+          for (const knowledge of recallObs.extras.microagent_knowledge) {
+            content += `\n\n- **${knowledge.name}** (triggered by: ${knowledge.trigger})\n\n\`\`\`\n${knowledge.content}\n\`\`\``;
+          }
+        }
+
+        const message: Message = {
+          type: "action",
+          sender: "assistant",
+          translationID: customTitle,
+          eventID: observation.payload.id,
+          content,
+          imageUrls: [],
+          timestamp: new Date().toISOString(),
+          success: true,
+        };
+
+        state.messages.push(message);
+        return; // Skip the normal observation handling below
+      }
+
+      // Normal handling for other observation types
       const translationID = `OBSERVATION_MESSAGE$${observationID.toUpperCase()}`;
       const causeID = observation.payload.cause;
       const causeMessage = state.messages.find(
@@ -226,6 +303,7 @@ export const chatSlice = createSlice({
           content = `${content.slice(0, MAX_CONTENT_LENGTH)}...`;
         }
         causeMessage.content = content;
+        // RecallObservation is now handled at the beginning of the function
       }
     },
 

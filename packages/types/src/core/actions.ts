@@ -158,6 +158,15 @@ export interface TaskTrackingAction
   };
 }
 
+export interface RecallAction extends OpenHandsActionEvent<"recall"> {
+  source: "agent";
+  args: {
+    recall_type: "workspace_context" | "knowledge";
+    query: string;
+    thought: string;
+  };
+}
+
 export type OpenHandsAction =
   | UserMessageAction
   | AssistantMessageAction
@@ -172,4 +181,5 @@ export type OpenHandsAction =
   | FileReadAction
   | FileEditAction
   | FileWriteAction
-  | RejectAction;
+  | RejectAction
+  | RecallAction;
