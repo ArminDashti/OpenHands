@@ -493,6 +493,7 @@ if [ -n "${PUBLIC_MODE_PORT:-}" ]; then
     --base-path "$AGENT_CANVAS_BASE_PATH" \
     --auth-required \
     --runtime-services-info "$RUNTIME_SERVICES_INFO" \
+    --sidebar-links "${AGENT_CANVAS_SIDEBAR_LINKS:-}" \
     --route "/api/automation=http://127.0.0.1:${AUTOMATION_PORT}" \
     --route "/api=http://127.0.0.1:${AGENT_SERVER_PORT}" \
     --route "/server_info=http://127.0.0.1:${AGENT_SERVER_PORT}" \

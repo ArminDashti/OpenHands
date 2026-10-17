@@ -101,6 +101,7 @@ export function parseArgs(argv = process.argv.slice(2), env = process.env) {
     allowLanSessionKey: false,
     runtimeServicesInfo: null,
     lockToCloud: null,
+    sidebarLinks: null,
     basePath: "/",
     vscodeBasePath: null,
     // Also settable via the --disable-telemetry flag below.
@@ -145,6 +146,9 @@ export function parseArgs(argv = process.argv.slice(2), env = process.env) {
         break;
       case "--lock-to-cloud":
         config.lockToCloud = argv[++i] || null;
+        break;
+      case "--sidebar-links":
+        config.sidebarLinks = argv[++i] || null;
         break;
       case "--base-path":
         config.basePath = normalizeBasePath(argv[++i]);
@@ -361,6 +365,12 @@ ROUTING:
  *   `agent-server-config.ts` so pre-built frontend bundles can hide manual
  *   backend setup and the custom Cloud URL field at runtime.
  *
+ * - `sidebarLinks`: a JSON string describing extra sidebar nav links, exposed
+ *   as `window.__AGENT_CANVAS_SIDEBAR_LINKS__`. Read by
+ *   `getConfiguredSidebarLinks()` in `#/config/sidebar-links` as a fallback
+ *   when `VITE_SIDEBAR_LINKS` is empty, so an operator can add e.g. an
+ *   OpenHands Enterprise link to a published build without a rebuild.
+ *
  * - `basePath`: the path prefix the SPA is mounted under, exposed as
  *   `window.__AGENT_CANVAS_BASE_PATH__` so runtime static assets like locale
  *   files can resolve through the same subpath as the built bundle.
@@ -391,6 +401,7 @@ function makeConfigInjectionScript(
   authRequired,
   runtimeServicesInfo,
   lockToCloud,
+  sidebarLinks,
   basePath,
   vscodeBasePath,
   disableTelemetry,
@@ -437,6 +448,15 @@ function makeConfigInjectionScript(
     );
   }
 
+  if (sidebarLinks) {
+    // Stored as the raw JSON string, same reasoning as runtimeServicesInfo:
+    // the browser-side parser (getConfiguredSidebarLinks) JSON.parses it
+    // exactly like the VITE_SIDEBAR_LINKS env var.
+    parts.push(
+      `window.__AGENT_CANVAS_SIDEBAR_LINKS__=${JSON.stringify(sidebarLinks)};`,
+    );
+  }
+
   if (basePath && basePath !== "/") {
     parts.push(
       `window.__AGENT_CANVAS_BASE_PATH__=${serializeForInlineScript(basePath)};`,
@@ -471,6 +491,7 @@ async function serveInjectedIndexHtml(
     authRequired,
     runtimeServicesInfo,
     lockToCloud,
+    sidebarLinks,
     basePath,
     vscodeBasePath,
     disableTelemetry,
@@ -488,6 +509,7 @@ async function serveInjectedIndexHtml(
     authRequired,
     runtimeServicesInfo,
     lockToCloud,
+    sidebarLinks,
     basePath,
     vscodeBasePath,
     disableTelemetry,
@@ -732,6 +754,7 @@ export function startStaticServer(config) {
     authRequired: policy.authRequired,
     runtimeServicesInfo: config.runtimeServicesInfo || null,
     lockToCloud: config.lockToCloud || null,
+    sidebarLinks: config.sidebarLinks || null,
     basePath: normalizeBasePath(config.basePath),
     vscodeBasePath: config.vscodeBasePath || null,
     disableTelemetry: config.disableTelemetry || false,
