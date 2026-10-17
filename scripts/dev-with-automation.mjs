@@ -28,6 +28,8 @@
  *
  * Environment variables:
  *   - PORT: Ingress port (default: 8000)
+ *   - OH_CANVAS_SAFE_VITE_PORT: Frontend (Vite/static) service port (default:
+ *       3001). Falls back to a free port when busy; `--frontend-port` overrides it.
  *   - OH_AUTOMATION_GIT_REF: Git ref for automation (overrides default version)
  *   - OH_AGENT_SERVER_LOCAL_PATH: Absolute path to a local software-agent-sdk
  *     checkout. Highest precedence for agent-server source selection: rebuilds
@@ -180,6 +182,7 @@ function parseArgs() {
     static: false,
     dynamic: false,
     staticDir: null,
+    frontendPort: null,
     skipBuild: false,
     public: false,
     frontendOnly: false,
@@ -211,6 +214,9 @@ function parseArgs() {
         break;
       case "--static-dir":
         config.staticDir = args[++i];
+        break;
+      case "--frontend-port":
+        config.frontendPort = parseInt(args[++i], 10);
         break;
       case "--skip-build":
         config.skipBuild = true;
@@ -440,6 +446,8 @@ async function buildConfig(args, env = process.env) {
   // OH_CANVAS_SAFE_BACKEND_PORT / OH_CANVAS_SAFE_AUTOMATION_PORT /
   // OH_CANVAS_SAFE_VITE_PORT allow tests (and advanced users) to redirect
   // internal service ports without affecting the production default.
+  // `--port` takes precedence over PORT, and `--frontend-port` over
+  // OH_CANVAS_SAFE_VITE_PORT.
   const preferredIngressPort = args.port || parseInt(env.PORT, 10) || 8000;
   const preferredBackendPort =
     parseInt(env.OH_CANVAS_SAFE_BACKEND_PORT, 10) || DEFAULT_BACKEND_PORT;
@@ -936,6 +944,22 @@ function buildAgentServerAutomationEnv(config) {
     // secret-registry env expansion.
     OPENHANDS_AUTOMATION_API_KEY: config.sessionApiKey,
   };
+}
+
+/**
+ * Build the CORS origin list for the automation backend.
+ *
+ * The frontend must be reachable from both the ingress origin (what the
+ * browser normally loads) and its own direct origin (Vite dev server / static
+ * server), so both are always allowed. The frontend port is `config.vitePort`
+ * — the resolved port after free-port fallback, never a hardcoded 3001.
+ *
+ * @param {object} config - Launcher config with `ingressPort` and `vitePort`
+ * @returns {string} Comma-separated CORS origin list
+ */
+function buildAutomationCorsOrigins(config) {
+  const frontendPort = config.vitePort ?? 3001;
+  return `http://localhost:${config.ingressPort},http://127.0.0.1:${config.ingressPort},http://localhost:${frontendPort},http://127.0.0.1:${frontendPort}`;
 }
 
 function buildAutomationTelemetryEnv(env = process.env) {

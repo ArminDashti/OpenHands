@@ -115,6 +115,7 @@ function logError(message) {
 export function parseArgs(argv = process.argv.slice(2)) {
   const config = {
     port: null,
+    frontendPort: null,
     automationGitRef: null,
     automationRepo: null,
     skipBuild: false,
