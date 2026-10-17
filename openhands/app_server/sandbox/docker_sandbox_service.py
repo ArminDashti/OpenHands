@@ -119,6 +119,11 @@ class DockerSandboxService(SandboxService):
         except (ValueError, AttributeError):
             created_at = utc_now()
 
+        # Extract sandbox_id from container name (strip the prefix)
+        sandbox_id = container.name
+        if sandbox_id.startswith(self.container_name_prefix):
+            sandbox_id = sandbox_id[len(self.container_name_prefix) :]
+
         # Get URL and session key for running containers
         exposed_urls = None
         session_api_key = None
