@@ -1,6 +1,6 @@
 import hashlib
 import uuid
-from typing import Tuple, Type
+from typing import Callable, Tuple, Type
 
 import openhands.agenthub  # noqa F401 (we import this to get the agents registered)
 from openhands.controller import AgentController
