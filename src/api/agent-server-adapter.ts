@@ -517,6 +517,9 @@ export const ACP_SERVER_TAG_KEY = "acpserver";
 export const CLIENT_SOURCE_TAG_KEY = "clientsource";
 export const AGENT_CANVAS_SOURCE = "agentcanvas";
 
+/** Sidebar pin marker; the value is the ISO-8601 instant that orders the list. */
+export const PINNED_TAG_KEY = "pinned";
+
 export const AUTOMATION_TRIGGER_TAG_KEY = "automationtrigger";
 export const AUTOMATION_ID_TAG_KEY = "automationid";
 export const AUTOMATION_NAME_TAG_KEY = "automationname";
