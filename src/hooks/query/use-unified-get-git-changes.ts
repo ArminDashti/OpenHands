@@ -43,7 +43,7 @@ export const useUnifiedGetGitChanges = () => {
       );
     },
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds (reduced from 5 minutes to ensure fresher data after git operations)
     gcTime: 1000 * 60 * 15, // 15 minutes
     refetchOnMount: "always",
     enabled: runtimeIsReady && !!conversationId,
