@@ -324,6 +324,7 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             context_window=usage.context_window,
             per_turn_token=usage.per_turn_token,
             llm_model=info.llm_model,
+            agent_kind=info.agent_kind,
             conversation_version='V1',
             sandbox_id=info.sandbox_id,
         )
@@ -376,6 +377,7 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             trigger=ConversationTrigger(stored.trigger) if stored.trigger else None,
             pr_number=stored.pr_number,
             llm_model=stored.llm_model,
+            agent_kind=stored.agent_kind or 'llm',
             metrics=metrics,
             created_at=created_at,
             updated_at=updated_at,

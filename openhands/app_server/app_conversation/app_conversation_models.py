@@ -31,6 +31,7 @@ class AppConversationInfo(BaseModel):
     trigger: ConversationTrigger | None = None
     pr_number: list[int] = Field(default_factory=list)
     llm_model: str | None = None
+    agent_kind: str = 'llm'
 
     # Conversation-scoped snapshot of the ACP agent spec, frozen at creation.
     # The cloud backend rebuilds the ACP agent from the user's *global* settings
