@@ -1,8 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useUnifiedResumeConversationSandbox } from "./mutation/use-unified-start-conversation";
-import { useUserProviders } from "./use-user-providers";
-import { useVisibilityChange } from "./use-visibility-change";
+import { useUnifiedResumeConversationSandbox } from "#/hooks/mutation/use-unified-start-conversation";
+import { useUserProviders } from "#/hooks/use-user-providers";
+import { useVisibilityChange } from "#/hooks/use-visibility-change";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
 import type { ConversationStatus } from "#/types/conversation-status";
@@ -19,25 +19,6 @@ interface UseSandboxRecoveryOptions {
   onError?: (error: Error) => void;
 }
 
-/**
- * Hook that handles sandbox recovery based on user intent.
- *
- * Recovery triggers:
- * - Page refresh: Resumes the sandbox on initial load if it was paused/stopped
- * - Tab gains focus: Resumes the sandbox if it was paused/stopped
- *
- * What does NOT trigger recovery:
- * - WebSocket disconnect: Does NOT automatically resume the sandbox
- *   (The server pauses sandboxes after 20 minutes of inactivity,
- *    and sandboxes should only be resumed when the user explicitly shows intent)
- *
- * @param options.conversationId - The conversation ID to recover
- * @param options.conversationStatus - The current conversation status
- * @param options.refetchConversation - Function to refetch conversation data on tab focus
- * @param options.onSuccess - Callback when recovery succeeds
- * @param options.onError - Callback when recovery fails
- * @returns isResuming - Whether a recovery is in progress
- */
 export function useSandboxRecovery({
   conversationId,
   conversationStatus,
@@ -50,7 +31,6 @@ export function useSandboxRecovery({
   const { mutate: resumeSandbox, isPending: isResuming } =
     useUnifiedResumeConversationSandbox();
 
-  // Track which conversation ID we've already processed for initial load recovery
   const processedConversationIdRef = React.useRef<string | null>(null);
 
   const attemptRecovery = React.useCallback(
@@ -96,7 +76,6 @@ export function useSandboxRecovery({
     ],
   );
 
-  // Handle page refresh (initial load) and conversation navigation
   React.useEffect(() => {
     if (!conversationId || !conversationStatus) return;
 
@@ -112,11 +91,9 @@ export function useSandboxRecovery({
   }, [conversationId, conversationStatus]);
 
   const handleVisible = React.useCallback(async () => {
-    // Skip if no conversation or refetch function
     if (!conversationId || !refetchConversation) return;
 
     try {
-      // Refetch to get fresh status - cached status may be stale if sandbox was paused while tab was inactive
       const { data } = await refetchConversation();
       attemptRecovery(data?.status);
     } catch (error) {
@@ -128,7 +105,6 @@ export function useSandboxRecovery({
     }
   }, [conversationId, refetchConversation, isResuming, attemptRecovery]);
 
-  // Handle tab focus (visibility change) - refetch conversation status and resume if needed
   useVisibilityChange({
     enabled: !!conversationId,
     onVisible: handleVisible,

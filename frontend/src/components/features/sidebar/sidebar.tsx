@@ -1,4 +1,5 @@
 import React from "react";
+import { isAxiosError } from "axios";
 import { useLocation } from "react-router";
 import { useAuth } from "#/context/auth-context";
 import { useUserPrefs } from "#/context/user-prefs-context";
@@ -28,6 +29,10 @@ export function Sidebar() {
   const [settingsModalIsOpen, setSettingsModalIsOpen] = React.useState(false);
   const [startNewProjectModalIsOpen, setStartNewProjectModalIsOpen] =
     React.useState(false);
+
+  const settingsErrorStatus = isAxiosError(settingsError)
+    ? settingsError.response?.status
+    : undefined;
 
   React.useEffect(() => {
     // If the github token is invalid, open the account settings modal again

@@ -1,7 +1,4 @@
-import { BrowserPanel } from "#/components/features/browser/browser";
+import SharedModule from "@openhands/agent-server-gui/src/routes/browser-tab";
 
-function Browser() {
-  return <BrowserPanel />;
-}
-
-export default Browser;
+export * from "@openhands/agent-server-gui/src/routes/browser-tab";
+export default SharedModule;

@@ -3,11 +3,6 @@ import {
   SuggestedTaskGroup,
 } from "#/components/features/home/tasks/task.types";
 
-/**
- * Groups suggested tasks by their repository.
- * @param tasks Array of suggested tasks
- * @returns Array of suggested task groups
- */
 export function groupSuggestedTasks(
   tasks: SuggestedTask[],
 ): SuggestedTaskGroup[] {

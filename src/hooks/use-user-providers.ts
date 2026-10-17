@@ -1,6 +1,6 @@
 import React from "react";
 import { convertRawProvidersToList } from "#/utils/convert-raw-providers-to-list";
-import { useSettings } from "./query/use-settings";
+import { useSettings } from "#/hooks/query/use-settings";
 
 export const useUserProviders = () => {
   const { data: settings, isLoading: isLoadingSettings } = useSettings();
