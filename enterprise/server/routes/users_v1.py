@@ -16,6 +16,7 @@ from openhands.app_server.sandbox.session_auth import validate_session_key
 from openhands.app_server.user.auth_user_context import AuthUserContext
 from openhands.app_server.user.user_context import UserContext
 from openhands.app_server.utils.dependencies import get_dependencies
+from openhands.utils.llm import canonicalize_model_for_ui
 
 _logger = logging.getLogger(__name__)
 
