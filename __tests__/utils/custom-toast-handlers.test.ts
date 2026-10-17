@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import toast from "react-hot-toast";
+import { toasterMessages } from "@openhands/ui";
 import {
   displaySuccessToast,
   displayErrorToast,
@@ -25,14 +25,14 @@ describe("custom-toast-handlers", () => {
   });
 
   describe("displaySuccessToast", () => {
-    it("should call toast.success with calculated duration for short message", () => {
+    it("should call toasterMessages.success", () => {
       const shortMessage = "Settings saved";
       displaySuccessToast(shortMessage);
 
       expect(toast.success).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          duration: 5000, // Should use minimum duration of 5000ms
+          duration: 5_000,
           position: "top-right",
           style: expect.objectContaining({
             borderRadius: "var(--oh-radius)",
@@ -73,6 +73,10 @@ describe("custom-toast-handlers", () => {
       expect(actualDuration).toBeLessThanOrEqual(10000);
     });
   });
+  describe("displayInfoToast", () => {
+    it("should call toasterMessages.info", () => {
+      const shortMessage = "Settings saved";
+      displayInfoToast(shortMessage);
 
   describe("displayErrorToast", () => {
     it("should call toast with calculated duration for short message", () => {
@@ -82,7 +86,7 @@ describe("custom-toast-handlers", () => {
       expect(toastMock).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          duration: 4000, // Should use minimum duration of 4000ms for errors
+          duration: 4_000,
           position: "top-right",
           icon: null,
           style: expect.objectContaining({
@@ -94,6 +98,11 @@ describe("custom-toast-handlers", () => {
         }),
       );
     });
+  });
+  describe("displayWarningToast", () => {
+    it("should call toasterMessages.warning", () => {
+      const shortMessage = "Settings saved";
+      displayWarningToast(shortMessage);
 
     it("should call toast with longer duration for long error message", () => {
       const longMessage =
@@ -103,7 +112,7 @@ describe("custom-toast-handlers", () => {
       expect(toastMock).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          duration: expect.any(Number),
+          duration: 4_000,
           position: "top-right",
           icon: null,
           style: expect.objectContaining({
@@ -114,6 +123,12 @@ describe("custom-toast-handlers", () => {
           }),
         }),
       );
+    });
+  });
+  describe("displayErrorToast", () => {
+    it("should call toasterMessages.error", () => {
+      const shortMessage = "Settings saved";
+      displayErrorToast(shortMessage);
 
       // Get the actual duration that was passed
       const callArgs = toastMock.mock.calls[0][1] as { duration: number };
