@@ -16,6 +16,7 @@ from storage.encrypt_utils import (
 from storage.org import Org
 from storage.org_member import OrgMember
 from storage.role_store import RoleStore
+from storage.settings_projection import build_user_settings
 from storage.user import User
 from storage.user_settings import UserSettings
 
