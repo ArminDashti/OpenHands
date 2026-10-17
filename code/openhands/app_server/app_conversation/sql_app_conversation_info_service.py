@@ -243,7 +243,7 @@ class SQLAppConversationInfoService(AppConversationInfoService):
         updated_at__lt: datetime | None = None,
     ) -> Select:
         # Apply the same filters as search_app_conversations
-        conditions = []
+        conditions: list[ColumnElement[bool]] = []
         if title__contains is not None:
             conditions.append(
                 StoredConversationMetadata.title.like(f'%{title__contains}%')
@@ -563,9 +563,9 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             accumulated_token_usage=token_usage,
         )
 
-        # Get timestamps
-        created_at = self._fix_timezone(stored.created_at)
-        updated_at = self._fix_timezone(stored.last_updated_at)
+        # Get timestamps with UTC fallback for missing values
+        created_at = self._fix_timezone(stored.created_at) or utc_now()
+        updated_at = self._fix_timezone(stored.last_updated_at) or utc_now()
 
         return AppConversationInfo(
             id=UUID(stored.conversation_id),
