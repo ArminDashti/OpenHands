@@ -1,0 +1,35 @@
+@keyframes spinner-simple-rotate {
+  0% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(270deg);
+  }
+}
+
+@keyframes spinner-dynamic-rotate {
+  0% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(270deg);
+  }
+}
+
+@keyframes spinner-dynamic-arc {
+  0% {
+    stroke-dashoffset: 85%;
+  }
+  25% {
+    stroke-dashoffset: 25%;
+  }
+  50% {
+    stroke-dashoffset: 10%;
+  }
+  75% {
+    stroke-dashoffset: 25%;
+  }
+  100% {
+    stroke-dashoffset: 85%;
+  }
+}
