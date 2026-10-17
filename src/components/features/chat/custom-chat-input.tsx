@@ -174,6 +174,17 @@ export function CustomChatInput({
         onChange={handleFileInputChange}
       />
 
+      {/* File autocomplete dropdown */}
+      <FileAutocomplete
+        isOpen={isAutocompleteOpen}
+        files={filteredFiles}
+        selectedIndex={selectedIndex}
+        position={autocompletePosition}
+        showAbove={showAbove}
+        onSelect={handleAutocompleteSelect}
+        onClose={handleAutocompleteClose}
+      />
+
       {/* Container with grip */}
       <div className="relative w-full">
         <ChatInputGrip
