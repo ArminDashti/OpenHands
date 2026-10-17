@@ -110,6 +110,7 @@ class DbSessionInjector(BaseModel, Injector[AsyncSession]):
     async def _create_async_gcp_creator(self):
         from sqlalchemy.dialects.postgresql.asyncpg import (
             AsyncAdapt_asyncpg_connection,
+            AsyncAdapt_asyncpg_dbapi,
         )
 
         engine = self._create_gcp_engine()
@@ -123,6 +124,7 @@ class DbSessionInjector(BaseModel, Injector[AsyncSession]):
     async def _create_async_gcp_engine(self):
         from sqlalchemy.dialects.postgresql.asyncpg import (
             AsyncAdapt_asyncpg_connection,
+            AsyncAdapt_asyncpg_dbapi,
         )
 
         base_engine = self._create_gcp_engine()
