@@ -26,6 +26,11 @@ function AuthProvider({ children, initialGithubTokenIsSet }: AuthContextProps) {
     localStorage.removeItem("gh_token");
   }, [setGitHubTokenIsSet]);
 
+  // Update localStorage when providersAreSet changes
+  React.useEffect(() => {
+    localStorage.setItem("providersAreSet", providersAreSet.toString());
+  }, [providersAreSet]);
+
   const value = React.useMemo(
     () => ({
       githubTokenIsSet,
