@@ -12,8 +12,10 @@ import type { AppConversationStartTask } from "#/api/conversation-service/agent-
  * @param limit Maximum number of tasks to return (max 100)
  * @returns Query result with array of in-progress start tasks
  */
-export const useStartTasks = (limit = 10) =>
-  useQuery({
+export const useStartTasks = (limit = 10) => {
+  const { data: settings } = useSettings();
+
+  return useQuery({
     queryKey: ["start-tasks", "search", limit],
     queryFn: (): AppConversationStartTask[] => [],
     select: (tasks) =>
@@ -21,3 +23,4 @@ export const useStartTasks = (limit = 10) =>
         (task) => task.status !== "READY" && task.status !== "ERROR",
       ),
   });
+};
