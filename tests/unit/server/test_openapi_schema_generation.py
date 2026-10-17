@@ -14,6 +14,7 @@ from openhands.storage.memory import InMemoryFileStore
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.file_settings_store import FileSettingsStore
 from openhands.storage.settings.settings_store import SettingsStore
+from tests.unit.test_utils import disable_session_api_key
 
 
 class MockUserAuth(UserAuth):
