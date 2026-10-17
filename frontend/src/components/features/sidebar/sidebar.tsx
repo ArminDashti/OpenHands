@@ -4,7 +4,6 @@ import { useLocation } from "react-router";
 import { useAuth } from "#/context/auth-context";
 import { useUserPrefs } from "#/context/user-prefs-context";
 import { useGitHubUser } from "#/hooks/query/use-github-user";
-import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { UserActions } from "./user-actions";
 import { AllHandsLogoButton } from "#/components/shared/buttons/all-hands-logo-button";
 import { DocsButton } from "#/components/shared/buttons/docs-button";
@@ -26,6 +25,7 @@ export function Sidebar() {
 
   const [accountSettingsModalOpen, setAccountSettingsModalOpen] =
     React.useState(false);
+
   const [settingsModalIsOpen, setSettingsModalIsOpen] = React.useState(false);
   const [startNewProjectModalIsOpen, setStartNewProjectModalIsOpen] =
     React.useState(false);
@@ -41,6 +41,12 @@ export function Sidebar() {
     }
   }, [user.isError]);
 
+  React.useEffect(() => {
+    if (!settings || !settingsAreUpToDate) {
+      setSettingsModalIsOpen(true);
+    }
+  }, [settings, settingsAreUpToDate]);
+
   const handleAccountSettingsModalClose = () => {
     // If the user closes the modal without connecting to GitHub,
     // we need to log them out to clear the invalid token from the
@@ -53,9 +59,6 @@ export function Sidebar() {
     if (location.pathname.startsWith("/app"))
       setStartNewProjectModalIsOpen(true);
   };
-
-  const showSettingsModal =
-    isAuthed && (!settingsAreUpToDate || settingsModalIsOpen);
 
   return (
     <>
@@ -83,7 +86,7 @@ export function Sidebar() {
       {accountSettingsModalOpen && (
         <AccountSettingsModal onClose={handleAccountSettingsModalClose} />
       )}
-      {showSettingsModal && (
+      {!accountSettingsModalOpen && settingsModalIsOpen && (
         <SettingsModal onClose={() => setSettingsModalIsOpen(false)} />
       )}
       {startNewProjectModalIsOpen && (
