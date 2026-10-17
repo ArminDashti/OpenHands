@@ -275,7 +275,8 @@ def prep_build_folder(
         src = Path(openhands_source_dir, file)
         if not src.exists():
             src = Path(project_root, file)
-        shutil.copy2(src, Path(build_folder, 'code', file))
+        if src.exists():
+            shutil.copy2(src, Path(build_folder, 'code', file))
 
     # Create a Dockerfile and write it to build_folder
     dockerfile_content = _generate_dockerfile(
@@ -308,9 +309,10 @@ def get_hash_for_lock_files(base_image: str):
         src = Path(openhands_source_dir, file)
         if not src.exists():
             src = Path(openhands_source_dir.parent, file)
-        with open(src, 'rb') as f:
-            for chunk in iter(lambda: f.read(4096), b''):
-                md5.update(chunk)
+        if src.exists():
+            with open(src, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    md5.update(chunk)
     # We get away with truncation because we want something that is unique
     # rather than something that is cryptographically secure
     result = truncate_hash(md5.hexdigest())
