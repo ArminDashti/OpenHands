@@ -101,6 +101,139 @@ class GitlabV1CallbackProcessor(EventCallbackProcessor):
                 detail=str(e),
             )
 
+    async def _should_respond_to_slack(self, conversation_id: UUID) -> bool:
+        """Check if we should respond to Slack based on the last message source.
+
+        Returns True if:
+        - We don't have tracking info (backward compatibility)
+        - The last user message matches what was sent from Slack
+        - The last user message is a summary instruction (callback's own message)
+
+        Returns False if:
+        - The last user message content doesn't match the tracked Slack message
+          (indicating the user sent a message via Web UI)
+        """
+        last_slack_content = self.slack_view_data.get('last_slack_message_content')
+
+        # If we don't have tracking info, allow the response (backward compatibility)
+        if last_slack_content is None:
+            return True
+
+        try:
+            last_user_message = await self._get_last_user_message(conversation_id)
+            if last_user_message is None:
+                return True
+
+            # Allow if the message matches what was sent from Slack
+            if last_user_message == last_slack_content:
+                return True
+
+            # Allow if it's a summary instruction (our own request)
+            summary_instruction = get_summary_instruction()
+            if last_user_message == summary_instruction:
+                return True
+
+            # Message doesn't match - user likely sent message from Web UI
+            _logger.info(
+                '[Slack V1] Privacy check failed: last message does not match Slack message',
+                extra={
+                    'conversation_id': str(conversation_id),
+                    'last_user_message_preview': last_user_message[:100]
+                    if last_user_message
+                    else None,
+                    'last_slack_content_preview': last_slack_content[:100]
+                    if last_slack_content
+                    else None,
+                },
+            )
+            return False
+
+        except Exception as e:
+            _logger.warning(
+                '[Slack V1] Error checking last message source, allowing response: %s', e
+            )
+            # On error, allow the response to not break existing functionality
+            return True
+
+    async def _get_last_user_message(self, conversation_id: UUID) -> str | None:
+        """Fetch the last user message content from the conversation.
+
+        Returns the content of the most recent user message, or None if not found.
+        """
+        from openhands.app_server.config import (
+            get_app_conversation_info_service,
+            get_httpx_client,
+            get_sandbox_service,
+        )
+        from openhands.app_server.event_callback.util import (
+            ensure_conversation_found,
+            ensure_running_sandbox,
+            get_agent_server_url_from_sandbox,
+        )
+        from openhands.app_server.services.injector import InjectorState
+        from openhands.app_server.user.specifiy_user_context import (
+            ADMIN,
+            USER_CONTEXT_ATTR,
+        )
+
+        state = InjectorState()
+        setattr(state, USER_CONTEXT_ATTR, ADMIN)
+
+        async with (
+            get_app_conversation_info_service(state) as app_conversation_info_service,
+            get_sandbox_service(state) as sandbox_service,
+            get_httpx_client(state) as httpx_client,
+        ):
+            app_conversation_info = ensure_conversation_found(
+                await app_conversation_info_service.get_app_conversation_info(
+                    conversation_id
+                ),
+                conversation_id,
+            )
+
+            sandbox = ensure_running_sandbox(
+                await sandbox_service.get_sandbox(app_conversation_info.sandbox_id),
+                app_conversation_info.sandbox_id,
+            )
+
+            if sandbox.session_api_key is None:
+                return None
+
+            agent_server_url = get_agent_server_url_from_sandbox(sandbox)
+
+            # Fetch the last user message from the agent server
+            url = f'{agent_server_url.rstrip("/")}/api/conversations/{conversation_id}/events'
+            headers = {'X-Session-API-Key': sandbox.session_api_key}
+
+            try:
+                response = await httpx_client.get(
+                    url,
+                    headers=headers,
+                    params={'limit': 50, 'reverse': True},  # Get most recent events
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                events = response.json().get('events', [])
+
+                # Find the most recent user message
+                for event in events:
+                    if (
+                        event.get('role') == 'user'
+                        and event.get('content')
+                        and isinstance(event['content'], list)
+                    ):
+                        for content_item in event['content']:
+                            if content_item.get('type') == 'text':
+                                return content_item.get('text')
+
+                return None
+
+            except Exception as e:
+                _logger.warning(
+                    '[Slack V1] Failed to fetch last user message: %s', e
+                )
+                return None
+
     # -------------------------------------------------------------------------
     # GitLab helpers
     # -------------------------------------------------------------------------
