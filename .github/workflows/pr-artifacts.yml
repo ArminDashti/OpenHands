@@ -1,5 +1,7 @@
 name: PR Artifacts
 
+run-name: PR Artifacts Smoke Test
+
 on:
   workflow_dispatch:
   pull_request_target:
