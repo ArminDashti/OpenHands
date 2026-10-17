@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
@@ -61,19 +62,31 @@ class AwsEventService(EventServiceBase):
             Body=json_str.encode('utf-8'),
         )
 
-    def _search_paths(self, prefix: Path, page_id: str | None = None) -> list[Path]:
-        """Search paths."""
+    def _search_paths(self, prefix: Path) -> list[tuple[Path, datetime | None]]:
+        """Return all event paths under *prefix* with S3 LastModified as hint.
+
+        ``list_objects_v2`` already returns ``LastModified`` (a timezone-aware
+        ``datetime``) for every object at no additional cost, so we can use it
+        to pre-sort and pre-filter candidates in the base class without extra
+        S3 calls.  If the bucket contains more than 1 000 objects the method
+        pages through all of them to ensure every event is visible.
+        """
+        result: list[tuple[Path, datetime | None]] = []
         kwargs: dict[str, Any] = {
             'Bucket': self.bucket_name,
             'Prefix': str(prefix),
         }
-        if page_id:
-            kwargs['ContinuationToken'] = page_id
-
-        response = self.s3_client.list_objects_v2(**kwargs)
-        contents = response.get('Contents', [])
-        paths = [Path(obj['Key']) for obj in contents]
-        return paths
+        while True:
+            response = self.s3_client.list_objects_v2(**kwargs)
+            for obj in response.get('Contents', []):
+                path = Path(obj['Key'])
+                last_modified: datetime | None = obj.get('LastModified')
+                result.append((path, last_modified))
+            if response.get('IsTruncated'):
+                kwargs['ContinuationToken'] = response['NextContinuationToken']
+            else:
+                break
+        return result
 
 
 class AwsEventServiceInjector(EventServiceInjector):
