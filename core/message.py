@@ -63,6 +63,10 @@ class Message(BaseModel):
     tool_call_id: str | None = None
     name: str | None = None  # name of the tool
 
+    # This is unique to Anthropic's claude-3-7-sonnet
+    # it is required to pass it back to the model to produce the next action
+    thinking_blocks: list[dict[str, str]] | None = None
+
     @property
     def contains_image(self) -> bool:
         return any(isinstance(content, ImageContent) for content in self.content)
@@ -90,6 +94,9 @@ class Message(BaseModel):
 
     def _list_serializer(self) -> dict:
         content: list[dict] = []
+        if self.thinking_blocks is not None:
+            content.extend(self.thinking_blocks)
+
         role_tool_with_prompt_caching = False
         for item in self.content:
             d = item.model_dump()
