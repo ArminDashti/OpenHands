@@ -2,9 +2,7 @@ import atexit
 from functools import lru_cache
 from typing import Callable
 
-import docker
 import requests
-import tenacity
 
 from openhands.core.config import AppConfig
 from openhands.core.exceptions import (
@@ -12,8 +10,6 @@ from openhands.core.exceptions import (
     AgentRuntimeNotFoundError,
     AgentRuntimeNotReadyError,
 )
-from openhands.core.logger import DEBUG
-from openhands.core.logger import openhands_logger as logger
 from openhands.events import EventStream
 from openhands.runtime.builder import DockerRuntimeBuilder
 from openhands.runtime.impl.action_execution.action_execution_client import (
@@ -21,20 +17,9 @@ from openhands.runtime.impl.action_execution.action_execution_client import (
 )
 from openhands.runtime.impl.docker.containers import remove_all_containers
 from openhands.runtime.plugins import PluginRequirement
-from openhands.runtime.utils import find_available_tcp_port
 from openhands.runtime.utils.log_streamer import LogStreamer
 from openhands.runtime.utils.runtime_build import build_runtime_image
 from openhands.utils.async_utils import call_sync_from_async
-from openhands.utils.tenacity_stop import stop_if_should_exit
-
-CONTAINER_NAME_PREFIX = 'openhands-runtime-'
-
-
-def remove_all_runtime_containers():
-    remove_all_containers(CONTAINER_NAME_PREFIX)
-
-
-_atexit_registered = False
 
 
 class DockerRuntime(ActionExecutionClient):
@@ -61,12 +46,8 @@ class DockerRuntime(ActionExecutionClient):
         status_callback: Callable | None = None,
         attach_to_existing: bool = False,
         headless_mode: bool = True,
+        container_info: ContainerInfo | None = None,
     ):
-        global _atexit_registered
-        if not _atexit_registered:
-            _atexit_registered = True
-            atexit.register(remove_all_runtime_containers)
-
         self.config = config
         self._host_port = 30000  # initial dummy value
         self._container_port = 30001  # initial dummy value
@@ -107,52 +88,22 @@ class DockerRuntime(ActionExecutionClient):
         return self.api_url
 
     async def connect(self):
+        """Initialize the runtime with the provided container."""
+        if not self.container_info:
+            raise RuntimeError('Container info not provided')
+
         self.send_status_message('STATUS$STARTING_RUNTIME')
-        try:
-            await call_sync_from_async(self._attach_to_container)
-        except docker.errors.NotFound as e:
-            if self.attach_to_existing:
-                self.log(
-                    'error',
-                    f'Container {self.container_name} not found.',
-                )
-                raise e
-            if self.runtime_container_image is None:
-                if self.base_container_image is None:
-                    raise ValueError(
-                        'Neither runtime container image nor base container image is set'
-                    )
-                self.send_status_message('STATUS$STARTING_CONTAINER')
-                self.runtime_container_image = build_runtime_image(
-                    self.base_container_image,
-                    self.runtime_builder,
-                    platform=self.config.sandbox.platform,
-                    extra_deps=self.config.sandbox.runtime_extra_deps,
-                    force_rebuild=self.config.sandbox.force_rebuild_runtime,
-                    extra_build_args=self.config.sandbox.runtime_extra_build_args,
-                )
-
-            self.log(
-                'info', f'Starting runtime with image: {self.runtime_container_image}'
-            )
-            await call_sync_from_async(self._init_container)
-            self.log(
-                'info',
-                f'Container started: {self.container_name}. VSCode URL: {self.vscode_url}',
-            )
-
-        self.log_streamer = LogStreamer(self.container, self.log)
+        self.log_streamer = LogStreamer(self.container_info.container, self.log)
 
         if not self.attach_to_existing:
-            self.log('info', f'Waiting for client to become ready at {self.api_url}...')
+            self.log(
+                'info',
+                f'Waiting for client to become ready at {self.container_info.api_url}...',
+            )
             self.send_status_message('STATUS$WAITING_FOR_CLIENT')
-
-        await call_sync_from_async(self._wait_until_alive)
 
         if not self.attach_to_existing:
             self.log('info', 'Runtime is ready.')
-
-        if not self.attach_to_existing:
             await call_sync_from_async(self.setup_initial_env)
 
         self.log(
