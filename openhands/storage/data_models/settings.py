@@ -13,6 +13,8 @@ _GIT_URL_PATTERN = re.compile(
 # - Relative local paths (no absolute paths, no parent traversal)
 _LOCAL_PATH_PATTERN = re.compile(r'^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$')
 
+MARKETPLACE_PATH_PATTERN = re.compile(r'^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)+\.json$')
+
 
 class MarketplaceRegistration(BaseModel):
     """Registration for a plugin marketplace.
