@@ -39,31 +39,8 @@ from openhands.storage.data_models.conversation_metadata import ConversationTrig
 
 
 @pytest.fixture
-async def async_engine():
-    """Create an async SQLite engine for testing."""
-    engine = create_async_engine(
-        'sqlite+aiosqlite:///:memory:',
-        poolclass=StaticPool,
-        connect_args={'check_same_thread': False},
-        echo=False,
-    )
-
-    # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    yield engine
-
-    await engine.dispose()
-
-
-@pytest.fixture
-async def async_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
+async def async_session(async_session_maker) -> AsyncGenerator[AsyncSession, None]:
     """Create an async session for testing."""
-    async_session_maker = async_sessionmaker(
-        async_engine, class_=AsyncSession, expire_on_commit=False
-    )
-
     async with async_session_maker() as db_session:
         yield db_session
 
