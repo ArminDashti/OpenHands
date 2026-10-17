@@ -56,7 +56,7 @@ POD_STATUS_MAPPING = {
 STATUS_MAPPING = {
     'running': SandboxStatus.RUNNING,
     'paused': SandboxStatus.PAUSED,
-    'stopped': SandboxStatus.MISSING,
+    'stopped': SandboxStatus.STOPPED,
     'starting': SandboxStatus.STARTING,
     'error': SandboxStatus.ERROR,
 }
