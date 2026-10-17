@@ -18,6 +18,7 @@ export const useChatInputEvents = (
   onFocus?: () => void,
   onBlur?: () => void,
 ) => {
+  const { isKeyboardVisible } = useVirtualKeyboard();
   // Handle input events
   const handleInput = useCallback(() => {
     smartResize();
@@ -89,7 +90,7 @@ export const useChatInputEvents = (
         handleSubmit();
       }
     },
-    [checkIsContentEmpty, increaseHeightForEmptyContent],
+    [checkIsContentEmpty, increaseHeightForEmptyContent, isKeyboardVisible],
   );
 
   // Handle blur events to ensure placeholder shows when empty
