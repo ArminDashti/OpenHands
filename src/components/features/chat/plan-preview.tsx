@@ -31,7 +31,6 @@ interface PlanPreviewProps {
   isBuildDisabled?: boolean;
 }
 
-/* eslint-disable i18next/no-literal-string */
 export function PlanPreview({
   planContent,
   isStreaming,
