@@ -1,6 +1,30 @@
 import { OpenHandsActionEvent } from "./base";
 import { ActionSecurityRisk } from "./security";
 
+// Thoughts can be either a string (backward compatibility) or a dictionary
+export type ThoughtsDict = {
+  default: string;
+  reasoning_content?: string;
+};
+
+export type Thoughts = string | ThoughtsDict;
+
+// Utility function to extract the default thought from the Thoughts type
+export function getDefaultThought(thoughts: Thoughts): string {
+  if (typeof thoughts === "string") {
+    return thoughts;
+  }
+  return thoughts.default || "";
+}
+
+// Utility function to extract the reasoning content from the Thoughts type
+export function getReasoningContent(thoughts: Thoughts): string {
+  if (typeof thoughts === "string") {
+    return "";
+  }
+  return thoughts.reasoning_content || "";
+}
+
 export interface UserMessageAction extends OpenHandsActionEvent<"message"> {
   source: "user";
   args: {
@@ -167,7 +191,7 @@ export interface RecallAction extends OpenHandsActionEvent<"recall"> {
   args: {
     recall_type: "workspace_context" | "knowledge";
     query: string;
-    thought: string;
+    thought: Thoughts;
   };
 }
 
