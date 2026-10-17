@@ -21,7 +21,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from fastapi import Request
@@ -326,7 +326,6 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             sandbox_id=info.sandbox_id,
         )
 
-        await self.db_session.merge(stored)
         await self.db_session.commit()
         return info
 

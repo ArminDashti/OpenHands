@@ -19,6 +19,7 @@ from openhands.app_server.app_conversation.app_conversation_models import (
 )
 from openhands.app_server.app_conversation.sql_app_conversation_info_service import (
     SQLAppConversationInfoService,
+    StoredConversationMetadata,
 )
 from openhands.app_server.user.admin_user_context import AdminUserContext
 from openhands.app_server.utils.sql_utils import Base
