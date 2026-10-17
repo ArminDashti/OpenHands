@@ -307,8 +307,7 @@ class TestBitbucketProviderDomain(unittest.TestCase):
 # Provider Token Validation Tests
 @pytest.mark.asyncio
 async def test_validate_provider_token_with_bitbucket_token():
-    """
-    Test that validate_provider_token correctly identifies a Bitbucket token
+    """Test that validate_provider_token correctly identifies a Bitbucket token
     and doesn't try to validate it as GitHub or GitLab.
     """
     # Mock the service classes to avoid actual API calls
@@ -347,8 +346,7 @@ async def test_validate_provider_token_with_bitbucket_token():
 
 @pytest.mark.asyncio
 async def test_check_provider_tokens_with_only_bitbucket():
-    """
-    Test that check_provider_tokens doesn't try to validate GitHub or GitLab tokens
+    """Test that check_provider_tokens doesn't try to validate GitHub or GitLab tokens
     when only a Bitbucket token is provided.
     """
     # Create a mock validate_provider_token function

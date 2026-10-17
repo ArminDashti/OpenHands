@@ -12,6 +12,7 @@ import {
   ErrorObservation,
   MCPObservation,
   OpenHandsObservation,
+  TaskTrackingObservation,
 } from "./observations";
 import { StatusUpdate } from "./variances";
 

@@ -149,9 +149,7 @@ def analyze_folder(
 
 
 def get_task_nature_category(task_name: str) -> str:
-    """
-    Get the nature category of the task.
-    """
+    """Get the nature category of the task."""
     task_nature = task_name.split('-')[0]
     if task_nature.lower() in ['sde', 'pm', 'ds', 'admin', 'hr', 'finance']:
         return task_nature
@@ -160,8 +158,7 @@ def get_task_nature_category(task_name: str) -> str:
 
 
 def calculate_score(total: int, result: int) -> float:
-    """
-    Calculate the score as a number between 0 and 1.
+    """Calculate the score as a number between 0 and 1.
 
     Formula: score = (result / total) * 0.5 + (result // total) * 0.5
     Explanation:
@@ -179,8 +176,7 @@ def calculate_score(total: int, result: int) -> float:
 
 
 def is_perfect_completion(total: int, result: int) -> bool:
-    """
-    Check if the task achieved perfect completion.
+    """Check if the task achieved perfect completion.
 
     Args:
         total: Total possible points

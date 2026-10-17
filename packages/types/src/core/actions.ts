@@ -133,6 +133,21 @@ export interface RejectAction extends OpenHandsActionEvent<"reject"> {
   };
 }
 
+export interface TaskTrackingAction
+  extends OpenHandsActionEvent<"task_tracking"> {
+  source: "agent";
+  args: {
+    command: string;
+    task_list: Array<{
+      id: string;
+      title: string;
+      status: "todo" | "in_progress" | "done";
+      notes?: string;
+    }>;
+    thought: string;
+  };
+}
+
 export type OpenHandsAction =
   | UserMessageAction
   | AssistantMessageAction
