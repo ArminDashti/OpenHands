@@ -6,6 +6,7 @@ from openhands.core.config.config_utils import (
     get_field_info,
 )
 from openhands.core.config.llm_config import LLMConfig
+from openhands.core.config.router_config import ModelConfig, RouterConfig
 from openhands.core.config.sandbox_config import SandboxConfig
 from openhands.core.config.search_config import SearchConfig
 from openhands.core.config.security_config import SecurityConfig
@@ -36,4 +37,6 @@ __all__ = [
     'get_field_info',
     'get_parser',
     'parse_arguments',
+    'RouterConfig',
+    'ModelConfig',
 ]
