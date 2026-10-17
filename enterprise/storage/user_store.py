@@ -9,7 +9,10 @@ from server.logger import logger
 from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload
 from storage.database import a_session_maker, session_maker
-from storage.encrypt_utils import decrypt_legacy_model
+from storage.encrypt_utils import (
+    decrypt_legacy_model,
+    encrypt_legacy_value,
+)
 from storage.org import Org
 from storage.org_member import OrgMember
 from storage.role_store import RoleStore
