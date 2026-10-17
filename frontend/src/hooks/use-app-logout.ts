@@ -1,6 +1,7 @@
 import { useCurrentSettings } from "#/context/settings-context";
 import { useLogout } from "./mutation/use-logout";
 import { useConfig } from "./query/use-config";
+import { useAuth } from "#/context/auth-context";
 
 export const useAppLogout = () => {
   const { data: config } = useConfig();

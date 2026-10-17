@@ -44,6 +44,8 @@ export const useHandleWSEvents = () => {
 
     if (isServerError(event)) {
       if (event.error_code === 401) {
+        // Save the last page before ending session
+        saveLastPage();
         displayErrorToast("Session expired.");
         endSession();
         return;

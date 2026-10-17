@@ -85,8 +85,41 @@ export default function MainApp() {
   }, []);
 
   const userIsAuthed = !!isAuthed && !authError;
+  const isOnLogoutPage = pathname === "/logout";
+
+  // In SaaS mode, when not authenticated and not on logout page, redirect to GitHub auth
+  React.useEffect(() => {
+    if (
+      !isFetchingAuth &&
+      !userIsAuthed &&
+      config.data?.APP_MODE === "saas" &&
+      !isOnLogoutPage &&
+      gitHubAuthUrl
+    ) {
+      window.location.href = gitHubAuthUrl;
+    }
+  }, [
+    isFetchingAuth,
+    userIsAuthed,
+    config.data?.APP_MODE,
+    isOnLogoutPage,
+    gitHubAuthUrl,
+  ]);
+
+  // Only show waitlist modal in non-SaaS mode
   const renderWaitlistModal =
-    !isFetchingAuth && !userIsAuthed && config.data?.APP_MODE === "saas";
+    !isFetchingAuth && !userIsAuthed && config.data?.APP_MODE !== "saas";
+
+  // Handle redirection to last page after login
+  usePostLoginRedirect(userIsAuthed);
+
+  // Track page visits for last page functionality
+  React.useEffect(() => {
+    if (pathname && userIsAuthed) {
+      // Save the current page for future reference
+      saveLastPage();
+    }
+  }, [pathname, userIsAuthed]);
 
   return (
     <div
