@@ -4,13 +4,15 @@ This module tests the SAAS implementation of SQLAppConversationInfoService,
 focusing on user isolation, SAAS metadata handling, and multi-tenant functionality.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
 from openhands.app_server.app_conversation.app_conversation_models import (
+    CODEX_CREDENTIAL_BINDING_TAG_KEY,
+    CODEX_CREDENTIAL_BINDING_TAG_VALUE,
     AppConversationInfo,
 )
 from openhands.app_server.user.specifiy_user_context import SpecifyUserContext

@@ -108,6 +108,18 @@ class SQLEventCallbackService(EventCallbackService):
         await self.db_session.commit()
         return True
 
+    async def delete_event_callbacks_for_conversation(
+        self, conversation_id: UUID
+    ) -> int:
+        async with self.async_session_maker() as db_session:
+            result = await db_session.execute(
+                delete(StoredEventCallback).where(
+                    StoredEventCallback.conversation_id == conversation_id
+                )
+            )
+            await db_session.commit()
+            return result.rowcount
+
     async def search_event_callbacks(
         self,
         conversation_id__eq: UUID | None = None,

@@ -238,6 +238,9 @@ async def search_app_conversation_start_tasks(
             limit=limit,
         )
     )
+    return page.model_copy(
+        update={'items': [_public_start_task(task) for task in page.items]}
+    )
 
 
 @router.get('/start-tasks/count')
@@ -268,7 +271,9 @@ async def batch_get_app_conversation_start_tasks(
     start_tasks = await app_conversation_start_task_service.batch_get_app_conversation_start_tasks(
         ids
     )
-    return start_tasks
+    return [
+        _public_start_task(task) if task is not None else None for task in start_tasks
+    ]
 
 
 async def _consume_remaining(
@@ -299,7 +304,7 @@ async def _stream_app_conversation_start(
         yield '[\n'
         comma = False
         async for task in app_conversation_service.start_app_conversation(request):
-            chunk = task.model_dump_json()
+            chunk = _public_start_task(task).model_dump_json()
             if comma:
                 chunk = ',\n' + chunk
             comma = True

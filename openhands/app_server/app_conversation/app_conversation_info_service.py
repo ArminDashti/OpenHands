@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
@@ -7,9 +8,18 @@ from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationInfo,
     AppConversationInfoPage,
     AppConversationSortOrder,
+    has_managed_codex_credential,
 )
 from openhands.app_server.services.injector import Injector
 from openhands.sdk.utils.models import DiscriminatedUnionMixin
+
+
+@dataclass(frozen=True)
+class ManagedCredentialConversationRef:
+    conversation_id: UUID
+    created_by_user_id: str | None
+    organization_id: UUID | None
+    owner_resolved: bool = True
 
 
 class AppConversationInfoService(ABC):
@@ -46,6 +56,67 @@ class AppConversationInfoService(ABC):
     ) -> AppConversationInfo | None:
         """Get a single conversation info, returning None if missing."""
 
+    @abstractmethod
+    async def is_app_conversation_id_available(self, conversation_id: UUID) -> bool:
+        """Check whether a conversation ID is globally available."""
+
+    async def try_reserve_app_conversation_id(
+        self,
+        conversation_id: UUID,
+        created_by_user_id: str | None = None,
+    ) -> bool:
+        return await self.is_app_conversation_id_available(conversation_id)
+
+    async def release_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> None:
+        return None
+
+    async def renew_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> bool:
+        return True
+
+    async def mark_app_conversation_id_reservation(
+        self,
+        conversation_id: UUID,
+        sandbox_id: str,
+        tags: dict[str, str] | None = None,
+    ) -> bool:
+        return True
+
+    async def get_managed_credential_conversations_for_sandbox(
+        self, sandbox_id: str
+    ) -> list[ManagedCredentialConversationRef]:
+        refs: list[ManagedCredentialConversationRef] = []
+        page_id = None
+        while True:
+            page = await self.search_app_conversation_info(
+                sandbox_id__eq=sandbox_id,
+                page_id=page_id,
+                limit=100,
+                include_sub_conversations=True,
+            )
+            refs.extend(
+                ManagedCredentialConversationRef(
+                    conversation_id=info.id,
+                    created_by_user_id=info.created_by_user_id,
+                    organization_id=None,
+                )
+                for info in page.items
+                if has_managed_codex_credential(info.tags)
+            )
+            if page.next_page_id is None:
+                return refs
+            page_id = page.next_page_id
+
+    async def has_managed_credential_conversation_for_sandbox(
+        self, sandbox_id: str
+    ) -> bool:
+        return bool(
+            await self.get_managed_credential_conversations_for_sandbox(sandbox_id)
+        )
+
     async def batch_get_app_conversation_info(
         self, conversation_ids: list[UUID]
     ) -> list[AppConversationInfo | None]:
@@ -61,7 +132,9 @@ class AppConversationInfoService(ABC):
 
     @abstractmethod
     async def save_app_conversation_info(
-        self, info: AppConversationInfo
+        self,
+        info: AppConversationInfo,
+        allow_reservation_handoff: bool = False,
     ) -> AppConversationInfo:
         """Store the sandboxed conversation info object given.
 

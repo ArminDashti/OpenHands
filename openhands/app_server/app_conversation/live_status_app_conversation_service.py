@@ -33,6 +33,7 @@ from openhands.app_server.app_conversation.agent_server_routing import (
 )
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
+    ManagedCredentialConversationRef,
 )
 from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversation,
@@ -44,6 +45,8 @@ from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationStartTaskStatus,
 )
 from openhands.app_server.app_conversation.app_conversation_service import (
+    AppConversationAlreadyExists,
+    AppConversationNotFound,
     AppConversationService,
     AppConversationServiceInjector,
 )
@@ -489,25 +492,81 @@ class LiveStatusAppConversationService(GitAppConversationService):
     async def start_app_conversation(
         self, request: AppConversationStartRequest
     ) -> AsyncGenerator[AppConversationStartTask, None]:
-        async for task in self._start_app_conversation(request):
-            await self.app_conversation_start_task_service.save_app_conversation_start_task(
-                task
+        async with aclosing(self._start_app_conversation(request)) as stream:
+            async for task in stream:
+                await self._save_start_task_update(task)
+                yield task
+
+    async def resume_app_conversation(
+        self, conversation_id: UUID
+    ) -> AsyncGenerator[AppConversationStartTask, None]:
+        async with _resume_lock(conversation_id):
+            existing_info = (
+                await self.app_conversation_info_service.get_app_conversation_info(
+                    conversation_id
+                )
             )
-            yield task
+            if existing_info is None:
+                raise AppConversationNotFound(conversation_id)
+            request = AppConversationStartRequest(
+                conversation_id=conversation_id,
+                sandbox_id=existing_info.sandbox_id,
+                selected_repository=existing_info.selected_repository,
+                selected_branch=existing_info.selected_branch,
+                git_provider=existing_info.git_provider,
+                trigger=existing_info.trigger,
+                llm_model=existing_info.llm_model,
+            )
+            user_id = await self.user_context.get_user_id()
+            (
+                task,
+                claimed,
+            ) = await self.app_conversation_start_task_service.claim_app_conversation_start_task(
+                AppConversationStartTask(
+                    created_by_user_id=user_id,
+                    request=request,
+                    app_conversation_id=existing_info.id,
+                ),
+                datetime.now(UTC)
+                - timedelta(seconds=max(self.sandbox_startup_timeout * 2, 300)),
+            )
+        yield task
+        if not claimed:
+            return
+        async with aclosing(
+            self._resume_app_conversation(
+                request,
+                existing_info,
+                user_id,
+                task=task,
+                yield_initial=False,
+            )
+        ) as stream:
+            async for task in stream:
+                await self._save_start_task_update(task)
+                yield task
 
     async def _start_app_conversation(
         self, request: AppConversationStartRequest
     ) -> AsyncGenerator[AppConversationStartTask, None]:
-        # Create and yield the start task
         user_id = await self.user_context.get_user_id()
         task = AppConversationStartTask(
             created_by_user_id=user_id,
             request=request,
+            app_conversation_id=reserved_conversation_id,
         )
-        yield task
+        failed = False
 
         try:
-            async for updated_task in self._wait_for_sandbox_start(task):
+            yield task
+
+            await self._prepare_event_callbacks_for_start(reserved_conversation_id)
+            callback_conversation_id = reserved_conversation_id
+
+            async for updated_task in self._wait_for_sandbox_start(
+                task,
+                reactivate_managed_conversations=True,
+            ):
                 yield updated_task
 
             # Get the sandbox
@@ -556,8 +615,8 @@ class LiveStatusAppConversationService(GitAppConversationService):
             deferred_initial_message = start_conversation_request.initial_message
             start_conversation_request.initial_message = None
 
-            # update status
             task.status = AppConversationStartTaskStatus.STARTING_CONVERSATION
+            task.app_conversation_id = conversation_id
             task.agent_server_url = agent_server_url
             yield task
 
@@ -601,13 +660,23 @@ class LiveStatusAppConversationService(GitAppConversationService):
                 trigger=request.trigger,
                 pr_number=request.pr_number,
             )
+
             await self.app_conversation_info_service.save_app_conversation_info(
                 app_conversation_info
             )
+            conversation_persisted = True
 
             # Update the start task
             task.status = AppConversationStartTaskStatus.READY
             task.app_conversation_id = info.id
+            await self._process_pending_messages(
+                task_id=task.id,
+                conversation_id=info.id,
+                agent_server_url=agent_server_url,
+                session_api_key=sandbox.session_api_key,
+            )
+
+            task.status = AppConversationStartTaskStatus.READY
             yield task
 
         except Exception as exc:
@@ -615,6 +684,409 @@ class LiveStatusAppConversationService(GitAppConversationService):
             task.status = AppConversationStartTaskStatus.ERROR
             task.detail = str(exc)
             yield task
+
+    async def _finish_app_conversation_start(
+        self,
+        reserved_conversation_id: UUID,
+        heartbeat: asyncio.Task[None] | None,
+        callback_conversation_id: UUID | None,
+    ) -> None:
+        await self._stop_reservation_heartbeat(heartbeat)
+        if callback_conversation_id is not None:
+            try:
+                owns_reservation = await self.app_conversation_info_service.renew_app_conversation_id_reservation(
+                    reserved_conversation_id
+                )
+            except Exception:
+                _logger.exception(
+                    'Unable to verify conversation ID reservation',
+                    extra={'conversation_id': str(reserved_conversation_id)},
+                )
+                owns_reservation = False
+            if owns_reservation:
+                await self._delete_event_callbacks_with_retry(
+                    callback_conversation_id,
+                    required=False,
+                )
+        await self._release_app_conversation_id_reservation(reserved_conversation_id)
+
+    async def _wait_for_cleanup_task(self, task: asyncio.Task[_T]) -> _T:
+        cancellation: asyncio.CancelledError | None = None
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError as exc:
+                cancellation = exc
+        result = await task
+        if cancellation is not None:
+            raise cancellation
+        return result
+
+    async def _persist_interrupted_start_task(
+        self,
+        task: AppConversationStartTask,
+        exc: BaseException,
+    ) -> None:
+        async def persist() -> None:
+            stored_task = await self.app_conversation_start_task_service.get_app_conversation_start_task(
+                task.id
+            )
+            if stored_task is not None and stored_task.status in (
+                AppConversationStartTaskStatus.READY,
+                AppConversationStartTaskStatus.ERROR,
+            ):
+                task.status = stored_task.status
+                task.detail = stored_task.detail
+                return
+            task.status = AppConversationStartTaskStatus.ERROR
+            task.detail = redact_text_secrets(
+                redact_api_key_literals(_exception_detail(exc))
+            )
+            await self.app_conversation_start_task_service.save_app_conversation_start_task(
+                task
+            )
+
+        cleanup_task = asyncio.create_task(persist())
+        try:
+            await self._wait_for_cleanup_task(cleanup_task)
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            _logger.exception(
+                'Unable to persist interrupted conversation start',
+                extra={'conversation_id': str(task.app_conversation_id)},
+            )
+
+    async def _persist_start_task_update(
+        self,
+        task: AppConversationStartTask,
+    ) -> None:
+        try:
+            await self._save_start_task_update(task)
+        except Exception:
+            _logger.exception(
+                'Unable to persist conversation start task',
+                extra={'conversation_id': str(task.app_conversation_id)},
+            )
+
+    async def _save_start_task_update(
+        self,
+        task: AppConversationStartTask,
+    ) -> None:
+        cleanup_task = asyncio.create_task(
+            self.app_conversation_start_task_service.save_app_conversation_start_task(
+                task
+            )
+        )
+        await self._wait_for_cleanup_task(cleanup_task)
+
+    async def _delete_event_callbacks_with_retry(
+        self,
+        conversation_id: UUID,
+        *,
+        required: bool,
+    ) -> bool:
+        for attempt in range(_RESERVATION_RELEASE_ATTEMPTS):
+            try:
+                await (
+                    self.event_callback_service.delete_event_callbacks_for_conversation(
+                        conversation_id
+                    )
+                )
+                return True
+            except Exception:
+                if attempt + 1 == _RESERVATION_RELEASE_ATTEMPTS:
+                    if required:
+                        raise
+                    _logger.exception(
+                        'Unable to delete event callbacks',
+                        extra={'conversation_id': str(conversation_id)},
+                    )
+                    return False
+                await asyncio.sleep(0.25 * (2**attempt))
+        return False
+
+    async def _prepare_event_callbacks_for_start(self, conversation_id: UUID) -> None:
+        try:
+            renewed = await self.app_conversation_info_service.renew_app_conversation_id_reservation(
+                conversation_id
+            )
+        except Exception as exc:
+            raise SandboxError('Could not verify conversation ID reservation') from exc
+        if not renewed:
+            raise SandboxError('Conversation ID reservation was lost')
+        await self._delete_event_callbacks_with_retry(
+            conversation_id,
+            required=True,
+        )
+
+    async def _maintain_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> None:
+        while True:
+            await asyncio.sleep(_RESERVATION_RENEW_INTERVAL_SECONDS)
+            try:
+                renewed = await self.app_conversation_info_service.renew_app_conversation_id_reservation(
+                    conversation_id
+                )
+            except Exception:
+                _logger.exception(
+                    'Unable to renew conversation ID reservation',
+                    extra={'conversation_id': str(conversation_id)},
+                )
+                continue
+            if not renewed:
+                return
+
+    async def _finish_app_conversation_id_reservation(
+        self,
+        conversation_id: UUID,
+        heartbeat: asyncio.Task[None] | None,
+    ) -> None:
+        await self._stop_reservation_heartbeat(heartbeat)
+        await self._release_app_conversation_id_reservation(conversation_id)
+
+    async def _stop_reservation_heartbeat(
+        self, heartbeat: asyncio.Task[None] | None
+    ) -> None:
+        if heartbeat is not None:
+            heartbeat.cancel()
+            try:
+                await heartbeat
+            except asyncio.CancelledError:
+                pass
+
+    async def _release_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> None:
+        for attempt in range(_RESERVATION_RELEASE_ATTEMPTS):
+            try:
+                await self.app_conversation_info_service.release_app_conversation_id_reservation(
+                    conversation_id
+                )
+                return
+            except Exception:
+                if attempt + 1 == _RESERVATION_RELEASE_ATTEMPTS:
+                    _logger.exception(
+                        'Unable to release conversation ID reservation',
+                        extra={'conversation_id': str(conversation_id)},
+                    )
+                    return
+                await asyncio.sleep(0.25 * (2**attempt))
+
+    async def _resume_app_conversation(
+        self,
+        request: AppConversationStartRequest,
+        existing_info: AppConversationInfo,
+        user_id: str | None,
+        task: AppConversationStartTask | None = None,
+        yield_initial: bool = True,
+    ) -> AsyncGenerator[AppConversationStartTask, None]:
+        task = task or AppConversationStartTask(
+            created_by_user_id=user_id,
+            request=request,
+            app_conversation_id=existing_info.id,
+        )
+        try:
+            if yield_initial:
+                yield task
+            sandbox_id = request.sandbox_id
+            assert sandbox_id is not None
+            managed_conversations = await self._get_managed_credential_conversations(
+                sandbox_id
+            )
+
+            async for updated_task in self._wait_for_sandbox_start(task):
+                yield updated_task
+
+            sandbox = await self.sandbox_service.get_sandbox(sandbox_id)
+            if sandbox is None:
+                raise SandboxError(f'Sandbox not found: {sandbox_id}')
+            agent_server_url = self._get_agent_server_url(sandbox)
+
+            task.status = AppConversationStartTaskStatus.STARTING_CONVERSATION
+            task.sandbox_id = sandbox.id
+            task.agent_server_url = agent_server_url
+            yield task
+
+            await self._get_cold_conversation(
+                sandbox,
+                agent_server_url,
+                existing_info.id,
+            )
+            if existing_info.sandbox_id != sandbox.id:
+                existing_info = existing_info.model_copy(
+                    update={'sandbox_id': sandbox.id}
+                )
+                await self.app_conversation_info_service.save_app_conversation_info(
+                    existing_info
+                )
+            before_delivery: Callable[[], Awaitable[Any]] | None = None
+            if has_managed_codex_credential(existing_info.tags):
+
+                async def activate_credential_binding() -> bool:
+                    return await self._activate_credential_binding(
+                        sandbox,
+                        existing_info.id,
+                        agent_server_url,
+                        start_task_id=task.id,
+                        required=True,
+                    )
+
+                before_delivery = activate_credential_binding
+
+            await self._process_pending_messages(
+                task_id=task.id,
+                conversation_id=existing_info.id,
+                agent_server_url=agent_server_url,
+                session_api_key=sandbox.session_api_key,
+                before_delivery=before_delivery,
+            )
+            task.status = AppConversationStartTaskStatus.READY
+            sibling_refs = [
+                ref
+                for ref in managed_conversations
+                if ref.conversation_id != existing_info.id
+                and (user_id is None or ref.created_by_user_id in (None, user_id))
+            ]
+            for sibling_ref in sibling_refs:
+                try:
+                    await self._reactivate_managed_sibling(
+                        sandbox,
+                        agent_server_url,
+                        sibling_ref,
+                    )
+                except Exception:
+                    _logger.exception(
+                        'Unable to reactivate managed sibling %s',
+                        sibling_ref.conversation_id,
+                    )
+            yield task
+        except (asyncio.CancelledError, GeneratorExit) as exc:
+            await self._persist_interrupted_start_task(task, exc)
+            raise
+        except Exception as exc:
+            _logger.exception('Error resuming conversation', stack_info=True)
+            detail = redact_text_secrets(
+                redact_api_key_literals(_exception_detail(exc))
+            )
+            task.status = AppConversationStartTaskStatus.ERROR
+            task.detail = detail
+            await self._persist_start_task_update(task)
+            yield task
+
+    async def _reactivate_managed_sibling(
+        self,
+        sandbox: SandboxInfo,
+        agent_server_url: str,
+        conversation_ref: ManagedCredentialConversationRef,
+    ) -> None:
+        conversation_id = conversation_ref.conversation_id
+        current_refs = await self._get_managed_credential_conversations(sandbox.id)
+        current_ref = next(
+            (
+                ref
+                for ref in current_refs
+                if ref.conversation_id == conversation_id
+                and ref.owner_resolved
+                and (
+                    sandbox.created_by_user_id is None
+                    or ref.created_by_user_id in (None, sandbox.created_by_user_id)
+                )
+            ),
+            None,
+        )
+        if current_ref is None:
+            raise SandboxError('Managed credential conversation is unavailable')
+        owner_id = (
+            current_ref.created_by_user_id
+            or sandbox.created_by_user_id
+            or await self.user_context.get_user_id()
+            or 'root'
+        )
+        credential_owner = ManagedCredentialConversationRef(
+            conversation_id=conversation_id,
+            created_by_user_id=owner_id,
+            organization_id=current_ref.organization_id,
+        )
+        await self._get_cold_conversation(
+            sandbox,
+            agent_server_url,
+            conversation_id,
+        )
+        task = AppConversationStartTask(
+            created_by_user_id=owner_id,
+            request=AppConversationStartRequest(
+                conversation_id=conversation_id,
+                sandbox_id=sandbox.id,
+            ),
+            app_conversation_id=conversation_id,
+            sandbox_id=sandbox.id,
+            agent_server_url=agent_server_url,
+            status=AppConversationStartTaskStatus.STARTING_CONVERSATION,
+        )
+        try:
+            await self._save_start_task_update(task)
+
+            async def activate_credential_binding() -> bool:
+                return await self._activate_credential_binding(
+                    sandbox,
+                    conversation_id,
+                    agent_server_url,
+                    start_task_id=task.id,
+                    required=True,
+                    credential_owner=credential_owner,
+                )
+
+            await self._process_pending_messages(
+                task_id=task.id,
+                conversation_id=conversation_id,
+                agent_server_url=agent_server_url,
+                session_api_key=sandbox.session_api_key,
+                before_delivery=activate_credential_binding,
+            )
+            task.status = AppConversationStartTaskStatus.READY
+            await self._save_start_task_update(task)
+        except (asyncio.CancelledError, GeneratorExit) as exc:
+            await self._persist_interrupted_start_task(task, exc)
+            raise
+        except Exception as exc:
+            task.status = AppConversationStartTaskStatus.ERROR
+            task.detail = redact_text_secrets(
+                redact_api_key_literals(_exception_detail(exc))
+            )
+            await self._persist_start_task_update(task)
+            raise
+
+    async def _get_managed_credential_conversations(
+        self,
+        sandbox_id: str,
+    ) -> list[ManagedCredentialConversationRef]:
+        return await self.app_conversation_info_service.get_managed_credential_conversations_for_sandbox(
+            sandbox_id
+        )
+
+    async def _get_cold_conversation(
+        self,
+        sandbox: SandboxInfo,
+        agent_server_url: str,
+        conversation_id: UUID,
+    ) -> ConversationInfo:
+        headers = (
+            {'X-Session-API-Key': sandbox.session_api_key}
+            if sandbox.session_api_key
+            else {}
+        )
+        response = await self.httpx_client.get(
+            f'{agent_server_url.rstrip("/")}/api/conversations/{conversation_id}',
+            headers=headers,
+            timeout=self.sandbox_startup_timeout,
+        )
+        response.raise_for_status()
+        info = ConversationInfo.model_validate(response.json())
+        if info.id != conversation_id:
+            raise SandboxError('Resumed conversation ID did not match')
+        return info
 
     async def _build_app_conversations(
         self, app_conversation_infos: Sequence[AppConversationInfo | None]
@@ -793,7 +1265,10 @@ class LiveStatusAppConversationService(GitAppConversationService):
         return result
 
     async def _wait_for_sandbox_start(
-        self, task: AppConversationStartTask
+        self,
+        task: AppConversationStartTask,
+        *,
+        reactivate_managed_conversations: bool = False,
     ) -> AsyncGenerator[AppConversationStartTask, None]:
         """Wait for sandbox to start and return info."""
 
@@ -981,11 +1456,9 @@ class LiveStatusAppConversationServiceInjector(AppConversationServiceInjector):
                 )
             config = get_global_config()
 
-            # If no web url has been set and we are using docker, we can use host.docker.internal
             web_url = config.web_url
             if web_url is None:
-                if isinstance(sandbox_service, DockerSandboxService):
-                    web_url = f'http://host.docker.internal:{sandbox_service.host_port}'
+                web_url = _resolve_credential_binding_url(web_url, sandbox_service)
 
             yield LiveStatusAppConversationService(
                 init_git_in_empty_workspace=self.init_git_in_empty_workspace,

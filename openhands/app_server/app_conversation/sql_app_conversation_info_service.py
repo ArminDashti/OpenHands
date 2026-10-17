@@ -35,8 +35,10 @@ from sqlalchemy import (
     Integer,
     Select,
     String,
+    delete,
     func,
     select,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,6 +63,9 @@ from openhands.sdk.llm.utils.metrics import TokenUsage
 from openhands.storage.data_models.conversation_metadata import ConversationTrigger
 
 logger = logging.getLogger(__name__)
+APP_CONVERSATION_RESERVATION_VERSION = 'V1_RESERVATION'
+APP_CONVERSATION_RESERVATION_TTL = timedelta(hours=1)
+APP_CONVERSATION_RESERVATION_TOKEN_KEY = '_reservation_token'
 
 
 class StoredConversationMetadata(Base):  # type: ignore
@@ -127,6 +132,9 @@ class SQLAppConversationInfoService(AppConversationInfoService):
 
     db_session: AsyncSession
     user_context: UserContext
+    _reservation_tokens: dict[UUID, str] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     async def search_app_conversation_info(
         self,
@@ -274,6 +282,199 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             return self._to_info(result)
         return None
 
+    async def is_app_conversation_id_available(self, conversation_id: UUID) -> bool:
+        query = select(StoredConversationMetadata.conversation_id).where(
+            StoredConversationMetadata.conversation_id == str(conversation_id)
+        )
+        return await self.db_session.scalar(query) is None
+
+    async def try_reserve_app_conversation_id(
+        self,
+        conversation_id: UUID,
+        created_by_user_id: str | None = None,
+    ) -> bool:
+        token = uuid.uuid4().hex
+        if await self._insert_app_conversation_id_reservation(conversation_id, token):
+            self._reservation_tokens[conversation_id] = token
+            return True
+        cutoff = utc_now() - APP_CONVERSATION_RESERVATION_TTL
+        now = utc_now()
+        result = cast(
+            CursorResult,
+            await self.db_session.execute(
+                update(StoredConversationMetadata)
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id),
+                    StoredConversationMetadata.conversation_version
+                    == APP_CONVERSATION_RESERVATION_VERSION,
+                    StoredConversationMetadata.last_updated_at < cutoff,
+                )
+                .values(
+                    tags={APP_CONVERSATION_RESERVATION_TOKEN_KEY: token},
+                    last_updated_at=now,
+                    created_at=now,
+                )
+            ),
+        )
+        await self.db_session.commit()
+        if not result.rowcount:
+            return False
+        self._reservation_tokens[conversation_id] = token
+        return True
+
+    async def _insert_app_conversation_id_reservation(
+        self, conversation_id: UUID, token: str
+    ) -> bool:
+        self.db_session.add(
+            StoredConversationMetadata(
+                conversation_id=str(conversation_id),
+                conversation_version=APP_CONVERSATION_RESERVATION_VERSION,
+                tags={APP_CONVERSATION_RESERVATION_TOKEN_KEY: token},
+            )
+        )
+        try:
+            await self.db_session.flush()
+            await self.db_session.commit()
+        except IntegrityError:
+            await self.db_session.rollback()
+            return False
+        return True
+
+    async def release_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> None:
+        token = self._reservation_tokens.get(conversation_id)
+        await self.db_session.rollback()
+        if token is None:
+            return
+        existing = (
+            await self.db_session.execute(
+                select(
+                    StoredConversationMetadata.conversation_version,
+                    StoredConversationMetadata.tags,
+                )
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id)
+                )
+                .with_for_update(of=StoredConversationMetadata)
+            )
+        ).first()
+        if (
+            existing is None
+            or existing.conversation_version != APP_CONVERSATION_RESERVATION_VERSION
+            or (existing.tags or {}).get(APP_CONVERSATION_RESERVATION_TOKEN_KEY)
+            != token
+        ):
+            self._reservation_tokens.pop(conversation_id, None)
+            await self.db_session.rollback()
+            return
+        reservation = await self.db_session.get(
+            StoredConversationMetadata, str(conversation_id)
+        )
+        assert reservation is not None
+        await self.db_session.delete(reservation)
+        await self.db_session.commit()
+        self._reservation_tokens.pop(conversation_id, None)
+
+    async def renew_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> bool:
+        token = self._reservation_tokens.get(conversation_id)
+        bind = self.db_session.bind
+        if token is None or bind is None:
+            return False
+        session_maker = async_sessionmaker(bind=bind, expire_on_commit=False)
+        async with session_maker() as session:
+            existing = (
+                await session.execute(
+                    select(
+                        StoredConversationMetadata.conversation_version,
+                        StoredConversationMetadata.tags,
+                    )
+                    .where(
+                        StoredConversationMetadata.conversation_id
+                        == str(conversation_id)
+                    )
+                    .with_for_update(of=StoredConversationMetadata)
+                )
+            ).first()
+            if (
+                existing is None
+                or existing.conversation_version != APP_CONVERSATION_RESERVATION_VERSION
+                or (existing.tags or {}).get(APP_CONVERSATION_RESERVATION_TOKEN_KEY)
+                != token
+            ):
+                await session.rollback()
+                return False
+            now = utc_now()
+            await session.execute(
+                update(StoredConversationMetadata)
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id)
+                )
+                .values(last_updated_at=now)
+            )
+            await session.commit()
+            return True
+
+    async def mark_app_conversation_id_reservation(
+        self,
+        conversation_id: UUID,
+        sandbox_id: str,
+        tags: dict[str, str] | None = None,
+    ) -> bool:
+        token = self._reservation_tokens.get(conversation_id)
+        if token is None:
+            return False
+        existing = (
+            await self.db_session.execute(
+                select(
+                    StoredConversationMetadata.conversation_version,
+                    StoredConversationMetadata.tags,
+                )
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id)
+                )
+                .with_for_update(of=StoredConversationMetadata)
+            )
+        ).first()
+        if (
+            existing is None
+            or existing.conversation_version != APP_CONVERSATION_RESERVATION_VERSION
+            or (existing.tags or {}).get(APP_CONVERSATION_RESERVATION_TOKEN_KEY)
+            != token
+        ):
+            await self.db_session.rollback()
+            return False
+        merged_tags = {**(existing.tags or {}), **(tags or {})}
+        merged_tags[APP_CONVERSATION_RESERVATION_TOKEN_KEY] = token
+        await self.db_session.execute(
+            update(StoredConversationMetadata)
+            .where(StoredConversationMetadata.conversation_id == str(conversation_id))
+            .values(
+                sandbox_id=sandbox_id,
+                tags=merged_tags,
+                last_updated_at=utc_now(),
+            )
+        )
+        await self.db_session.commit()
+        return True
+
+    async def has_managed_credential_conversation_for_sandbox(
+        self, sandbox_id: str
+    ) -> bool:
+        rows = (
+            await self.db_session.execute(
+                select(StoredConversationMetadata.tags).where(
+                    StoredConversationMetadata.sandbox_id == sandbox_id,
+                    StoredConversationMetadata.conversation_version.in_(
+                        ('V1', APP_CONVERSATION_RESERVATION_VERSION)
+                    ),
+                )
+            )
+        ).scalars()
+        return any(has_managed_codex_credential(tags or {}) for tags in rows)
+
     async def batch_get_app_conversation_info(
         self, conversation_ids: list[UUID]
     ) -> list[AppConversationInfo | None]:
@@ -297,9 +498,11 @@ class SQLAppConversationInfoService(AppConversationInfoService):
 
         return results
 
-    async def save_app_conversation_info(
-        self, info: AppConversationInfo
-    ) -> AppConversationInfo:
+    async def _merge_app_conversation_info(
+        self,
+        info: AppConversationInfo,
+        allow_reservation_handoff: bool = False,
+    ) -> None:
         metrics = info.metrics or MetricsSnapshot()
         usage = metrics.accumulated_token_usage or TokenUsage()
 

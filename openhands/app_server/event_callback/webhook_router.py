@@ -120,7 +120,8 @@ async def on_conversation_update(
         pr_number=existing.pr_number,
     )
     await app_conversation_info_service.save_app_conversation_info(
-        app_conversation_info
+        app_conversation_info,
+        allow_reservation_handoff=True,
     )
 
     return Success()

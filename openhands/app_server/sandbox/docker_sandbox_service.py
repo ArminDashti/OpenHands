@@ -162,7 +162,7 @@ class DockerSandboxService(SandboxService):
         return SandboxInfo(
             id=container.name,
             created_by_user_id=None,
-            sandbox_spec_id=container.image.tags[0],
+            sandbox_spec_id=configured_image,
             status=status,
             session_api_key=session_api_key,
             exposed_urls=exposed_urls,
@@ -334,6 +334,16 @@ class DockerSandboxService(SandboxService):
         except (NotFound, APIError):
             return False
 
+    async def _prepare_container_for_pause(self, container, sandbox_id: str) -> None:
+        if not await self._requires_credential_pause_barrier(sandbox_id):
+            return
+        sandbox = await self._container_to_sandbox_info(container)
+        if sandbox is None:
+            raise SandboxError(
+                f'Missing runtime metadata for managed sandbox: {sandbox_id}'
+            )
+        await self._run_credential_pause_barrier(sandbox, self.httpx_client)
+
     async def pause_sandbox(self, sandbox_id: str) -> bool:
         """Pause a running sandbox."""
         try:
@@ -342,11 +352,17 @@ class DockerSandboxService(SandboxService):
             container = self.docker_client.containers.get(sandbox_id)
 
             if container.status == 'running':
+                await self._prepare_container_for_pause(container, sandbox_id)
                 container.pause()
 
             return True
         except (NotFound, APIError):
             return False
+        except (httpx.HTTPError, ValueError, SandboxError) as exc:
+            raise SandboxError(
+                'Agent Server did not complete its pause barrier',
+                status_code=503,
+            ) from exc
 
     async def delete_sandbox(self, sandbox_id: str) -> bool:
         """Delete a sandbox."""
@@ -355,7 +371,8 @@ class DockerSandboxService(SandboxService):
                 return False
             container = self.docker_client.containers.get(sandbox_id)
 
-            # Stop the container if it's running
+            if container.status == 'running':
+                await self._prepare_container_for_pause(container, sandbox_id)
             if container.status in ['running', 'paused']:
                 container.stop(timeout=10)
 
@@ -374,6 +391,11 @@ class DockerSandboxService(SandboxService):
             return True
         except (NotFound, APIError):
             return False
+        except (httpx.HTTPError, ValueError, SandboxError) as exc:
+            raise SandboxError(
+                'Agent Server did not complete its pause barrier',
+                status_code=503,
+            ) from exc
 
 
 class DockerSandboxServiceInjector(SandboxServiceInjector):

@@ -1,24 +1,30 @@
 """Enterprise injector for SQLAppConversationInfoService with SAAS filtering."""
 
 from datetime import datetime
-from typing import AsyncGenerator
-from uuid import UUID
+from typing import AsyncGenerator, cast
+from uuid import UUID, uuid4
 
 from fastapi import Request
 from sqlalchemy import func, select
 from storage.stored_conversation_metadata_saas import StoredConversationMetadataSaas
 from storage.user import User
 
+from openhands.agent_server.utils import utc_now
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
     AppConversationInfoServiceInjector,
+    ManagedCredentialConversationRef,
 )
 from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationInfo,
     AppConversationInfoPage,
     AppConversationSortOrder,
+    has_managed_codex_credential,
 )
 from openhands.app_server.app_conversation.sql_app_conversation_info_service import (
+    APP_CONVERSATION_RESERVATION_TOKEN_KEY,
+    APP_CONVERSATION_RESERVATION_TTL,
+    APP_CONVERSATION_RESERVATION_VERSION,
     SQLAppConversationInfoService,
     StoredConversationMetadata,
 )
@@ -50,7 +56,7 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
         """Select query that includes SAAS metadata for retrieving user_id."""
         query = (
             select(StoredConversationMetadata, StoredConversationMetadataSaas)
-            .join(
+            .outerjoin(
                 StoredConversationMetadataSaas,
                 StoredConversationMetadata.conversation_id
                 == StoredConversationMetadataSaas.conversation_id,
@@ -64,6 +70,39 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
             query = query.where(StoredConversationMetadataSaas.user_id == user_id_uuid)
 
         return query
+
+    async def get_managed_credential_conversations_for_sandbox(
+        self, sandbox_id: str
+    ) -> list[ManagedCredentialConversationRef]:
+        query = (
+            select(StoredConversationMetadata, StoredConversationMetadataSaas)
+            .outerjoin(
+                StoredConversationMetadataSaas,
+                StoredConversationMetadata.conversation_id
+                == StoredConversationMetadataSaas.conversation_id,
+            )
+            .where(
+                StoredConversationMetadata.conversation_version == 'V1',
+                StoredConversationMetadata.sandbox_id == sandbox_id,
+            )
+        )
+        query = await self._apply_user_and_org_filter(query)
+        rows = (await self.db_session.execute(query)).all()
+        refs = []
+        for stored, saas in rows:
+            if not has_managed_codex_credential(stored.tags or {}):
+                continue
+            refs.append(
+                ManagedCredentialConversationRef(
+                    conversation_id=UUID(stored.conversation_id),
+                    created_by_user_id=(
+                        str(saas.user_id) if saas and saas.user_id else None
+                    ),
+                    organization_id=saas.org_id if saas else None,
+                    owner_resolved=saas is not None,
+                )
+            )
+        return refs
 
     async def search_app_conversation_info(
         self,
@@ -270,8 +309,165 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
 
         return results
 
+    async def try_reserve_app_conversation_id(
+        self,
+        conversation_id: UUID,
+        created_by_user_id: str | None = None,
+    ) -> bool:
+        user_id_str = await self.user_context.get_user_id() or created_by_user_id
+        if not user_id_str:
+            return False
+        user_id = UUID(user_id_str)
+        user = await self.db_session.get(User, user_id)
+        if user is None:
+            raise AuthError()
+        organization_id = await self._get_effective_org_id() or user.current_org_id
+        if organization_id is None:
+            raise AuthError()
+        token = uuid4().hex
+        if await self._insert_app_conversation_id_reservation_with_owner(
+            conversation_id,
+            user_id,
+            organization_id,
+            token,
+        ):
+            self._reservation_tokens[conversation_id] = token
+            return True
+
+        cutoff = utc_now() - APP_CONVERSATION_RESERVATION_TTL
+        now = utc_now()
+        result = cast(
+            CursorResult,
+            await self.db_session.execute(
+                update(StoredConversationMetadata)
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id),
+                    StoredConversationMetadata.conversation_version
+                    == APP_CONVERSATION_RESERVATION_VERSION,
+                    StoredConversationMetadata.last_updated_at < cutoff,
+                )
+                .values(
+                    tags={APP_CONVERSATION_RESERVATION_TOKEN_KEY: token},
+                    last_updated_at=now,
+                    created_at=now,
+                )
+            ),
+        )
+        if not result.rowcount:
+            await self.db_session.rollback()
+            return False
+        await self.db_session.merge(
+            StoredConversationMetadataSaas(
+                conversation_id=str(conversation_id),
+                user_id=user_id,
+                org_id=organization_id,
+            )
+        )
+        await self.db_session.commit()
+        self._reservation_tokens[conversation_id] = token
+        return True
+
+    async def _insert_app_conversation_id_reservation_with_owner(
+        self,
+        conversation_id: UUID,
+        user_id: UUID,
+        organization_id: UUID,
+        token: str,
+    ) -> bool:
+        self.db_session.add(
+            StoredConversationMetadata(
+                conversation_id=str(conversation_id),
+                conversation_version=APP_CONVERSATION_RESERVATION_VERSION,
+                tags={APP_CONVERSATION_RESERVATION_TOKEN_KEY: token},
+            )
+        )
+        self.db_session.add(
+            StoredConversationMetadataSaas(
+                conversation_id=str(conversation_id),
+                user_id=user_id,
+                org_id=organization_id,
+            )
+        )
+        try:
+            await self.db_session.flush()
+            await self.db_session.commit()
+        except IntegrityError:
+            await self.db_session.rollback()
+            return False
+        return True
+
+    async def release_app_conversation_id_reservation(
+        self, conversation_id: UUID
+    ) -> None:
+        token = self._reservation_tokens.get(conversation_id)
+        await self.db_session.rollback()
+        if token is None:
+            return
+        existing = (
+            await self.db_session.execute(
+                select(
+                    StoredConversationMetadata.conversation_version,
+                    StoredConversationMetadata.tags,
+                )
+                .where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id)
+                )
+                .with_for_update(of=StoredConversationMetadata)
+            )
+        ).first()
+        if (
+            existing is None
+            or existing.conversation_version != APP_CONVERSATION_RESERVATION_VERSION
+            or (existing.tags or {}).get(APP_CONVERSATION_RESERVATION_TOKEN_KEY)
+            != token
+        ):
+            self._reservation_tokens.pop(conversation_id, None)
+            await self.db_session.rollback()
+            return
+        await self.db_session.execute(
+            delete(StoredConversationMetadataSaas).where(
+                StoredConversationMetadataSaas.conversation_id == str(conversation_id)
+            )
+        )
+        await self.db_session.execute(
+            delete(StoredConversationMetadata).where(
+                StoredConversationMetadata.conversation_id == str(conversation_id),
+                StoredConversationMetadata.conversation_version
+                == APP_CONVERSATION_RESERVATION_VERSION,
+            )
+        )
+        await self.db_session.commit()
+        self._reservation_tokens.pop(conversation_id, None)
+
+    async def delete_app_conversation_info(self, conversation_id: UUID) -> bool:
+        query = await self._secure_select_with_saas_metadata()
+        existing = (
+            await self.db_session.execute(
+                query.where(
+                    StoredConversationMetadata.conversation_id == str(conversation_id)
+                ).with_for_update(of=StoredConversationMetadata)
+            )
+        ).first()
+        if existing is None:
+            await self.db_session.rollback()
+            return False
+        await self.db_session.execute(
+            delete(StoredConversationMetadataSaas).where(
+                StoredConversationMetadataSaas.conversation_id == str(conversation_id)
+            )
+        )
+        await self.db_session.execute(
+            delete(StoredConversationMetadata).where(
+                StoredConversationMetadata.conversation_id == str(conversation_id)
+            )
+        )
+        await self.db_session.commit()
+        return True
+
     async def save_app_conversation_info(
-        self, info: AppConversationInfo
+        self,
+        info: AppConversationInfo,
+        allow_reservation_handoff: bool = False,
     ) -> AppConversationInfo:
         """Save conversation info and create/update SAAS metadata with user_id and org_id."""
         # Save the base conversation metadata
@@ -306,10 +502,8 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
                     user_id=user_id_uuid,
                     org_id=user.current_org_id,
                 )
-                self.db_session.add(saas_metadata)
-
-            await self.db_session.commit()
-
+            )
+        await self.db_session.commit()
         return info
 
     def _to_info_with_user_id(
@@ -323,7 +517,9 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
 
         # Override the created_by_user_id with the user_id from SAAS metadata
         info.created_by_user_id = (
-            str(saas_metadata.user_id) if saas_metadata.user_id else None
+            str(saas_metadata.user_id)
+            if saas_metadata is not None and saas_metadata.user_id
+            else None
         )
 
         return info

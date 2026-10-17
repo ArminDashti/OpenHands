@@ -121,6 +121,17 @@ async def resume_sandbox(
     sandbox_id: str,
     sandbox_service: SandboxService = sandbox_service_dependency,
 ) -> Success:
+    if await sandbox_service.get_sandbox(sandbox_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    if await sandbox_service._requires_credential_pause_barrier(sandbox_id):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=(
+                'Resume a conversation through '
+                'POST /api/v1/app-conversations/{conversation_id}/resume'
+            ),
+        )
+
     exists = await sandbox_service.resume_sandbox(sandbox_id)
     if not exists:
         raise HTTPException(status.HTTP_404_NOT_FOUND)

@@ -16,6 +16,14 @@ from openhands.sdk import Workspace
 from openhands.sdk.utils.models import DiscriminatedUnionMixin
 
 
+class AppConversationNotFound(Exception):
+    pass
+
+
+class AppConversationAlreadyExists(Exception):
+    pass
+
+
 class AppConversationService(ABC):
     """Service for managing conversations running in sandboxes."""
 
@@ -84,6 +92,16 @@ class AppConversationService(ABC):
         yield AppConversationStartTask(
             created_by_user_id='dummy',
             request=dummy_request,
+        )
+
+    @abstractmethod
+    async def resume_app_conversation(
+        self, conversation_id: UUID
+    ) -> AsyncGenerator[AppConversationStartTask, None]:
+        """Resume an existing conversation."""
+        yield AppConversationStartTask(
+            created_by_user_id='dummy',
+            request=AppConversationStartRequest(conversation_id=conversation_id),
         )
 
     @abstractmethod

@@ -52,6 +52,9 @@ export interface V1AppConversationStartTask {
   updated_at: string;
 }
 
+const RESUME_POLL_INTERVAL_MS = 1000;
+const RESUME_POLL_TIMEOUT_MS = 15 * 60 * 1000;
+
 class V1ConversationService {
   /**
    * Create a new V1 conversation using the app-conversations API
@@ -95,6 +98,55 @@ class V1ConversationService {
     );
 
     return data;
+  }
+
+  static async resumeAppConversation(
+    conversationId: string,
+  ): Promise<V1AppConversationStartTask> {
+    const { data: initialTask } =
+      await openHands.post<V1AppConversationStartTask>(
+        `/api/v1/app-conversations/${conversationId}/resume`,
+      );
+    return this.waitForResumeTask(initialTask);
+  }
+
+  private static waitForResumeTask(
+    initialTask: V1AppConversationStartTask,
+  ): Promise<V1AppConversationStartTask> {
+    const deadline = Date.now() + RESUME_POLL_TIMEOUT_MS;
+    return new Promise((resolve, reject) => {
+      const checkTask = (task: V1AppConversationStartTask) => {
+        if (task.status === "READY") {
+          if (!task.app_conversation_id) {
+            reject(new Error("Resume task completed without a conversation"));
+            return;
+          }
+          resolve(task);
+          return;
+        }
+        if (task.status === "ERROR") {
+          reject(new Error(task.detail || "Failed to resume conversation"));
+          return;
+        }
+        if (Date.now() >= deadline) {
+          reject(new Error("Timed out waiting for conversation resume"));
+          return;
+        }
+        setTimeout(() => {
+          this.getStartTask(task.id)
+            .then((nextTask) => {
+              if (!nextTask) {
+                reject(new Error("Resume task not found"));
+                return;
+              }
+              checkTask(nextTask);
+            })
+            .catch(reject);
+        }, RESUME_POLL_INTERVAL_MS);
+      };
+
+      checkTask(initialTask);
+    });
   }
 
   /**
