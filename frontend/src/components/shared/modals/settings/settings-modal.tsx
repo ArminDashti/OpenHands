@@ -32,7 +32,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </p>
         {aiConfigOptions.isLoading && (
           <div className="flex justify-center">
-            <LoadingSpinner size="small" />
+            <Spinner size="small" />
           </div>
         )}
         {aiConfigOptions.data && (

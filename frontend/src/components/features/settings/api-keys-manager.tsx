@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "#/components/features/settings/brand-button";
-import { LoadingSpinner } from "#/components/shared/loading-spinner";
+import { Spinner } from "#/components/shared/spinner";
 import { ApiKey, CreateApiKeyResponse } from "#/api/api-keys";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { CreateApiKeyModal } from "./create-api-key-modal";
