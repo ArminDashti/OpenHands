@@ -404,6 +404,25 @@ export function validateFrontendDependencies(
 export const AGENT_SERVER_IMPORT_MODULES = "canvas_ui_tool";
 
 /**
+ * Append the `--with` pins that bound unbounded SDK transitive deps.
+ *
+ * Only the released-PyPI branches use these. A local checkout or git ref is
+ * how an SDK fix for one of these pins gets tested, so forcing the pin there
+ * would mask the fix.
+ *
+ * @param {string[]} uvxArgs - uvx argument list, mutated in place.
+ */
+function pushTransitiveDepConstraints(uvxArgs) {
+  for (const constraint of [
+    AGENT_CLIENT_PROTOCOL_CONSTRAINT,
+    FASTMCP_CONSTRAINT,
+    AGENT_SERVER_POSTHOG_CONSTRAINT,
+  ]) {
+    if (constraint) uvxArgs.push("--with", constraint);
+  }
+}
+
+/**
  * Build the uvx command and arguments for running agent-server.
  *
  * Environment variables (highest precedence first):
