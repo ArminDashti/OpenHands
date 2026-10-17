@@ -1,0 +1,28 @@
+[33mRunning the app...(B[m
+[33mStarting backend server...(B[m
+[33mWaiting for the backend to start...(B[m
+Connection to localhost (127.0.0.1) 3000 port [tcp/*] succeeded!
+[32mBackend started successfully.(B[m
+[33mStarting frontend...(B[m
+
+> openhands-frontend@0.53.0 dev
+> npm run make-i18n && cross-env VITE_MOCK_API=false react-router dev --port 12000 --host 0.0.0.0
+
+
+> openhands-frontend@0.53.0 make-i18n
+> node scripts/make-i18n-translations.cjs
+
+Cannot optimize dependency: [36m@xterm/xterm/css/xterm.css[39m, present in client 'optimizeDeps.include'
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m12000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.1.0.142:[1m12000[22m/[39m
+[92m19:23:33 - openhands:WARNING[0m: mcp_config.py:331 - No search engine API key found, skipping search engine
+================ DOCKER BUILD STARTED ================
+[92m19:28:06 - openhands:ERROR[0m: provider.py:425 - Failed to access repository openhands-agent/.openhands with all available providers. Errors: github: Resource not found on github API: Client error '404 Not Found' for url 'https://api.github.com/repos/openhands-agent/.openhands'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+[92m19:28:06 - openhands:WARNING[0m: utils.py:298 - Added microagent stdio server: fetch
+[92m19:28:08 - openhands:WARNING[0m: agent_session.py:527 - State could not be restored: Could not restore state from session file for sid: 8e73e11fb87641e7ab507ecd4e979bb4
+[92m19:28:26 - openhands:WARNING[0m: mcp_config.py:331 - No search engine API key found, skipping search engine
+[92m19:30:16 - openhands:ERROR[0m: provider.py:425 - Failed to access repository openhands-agent/.openhands with all available providers. Errors: github: Resource not found on github API: Client error '404 Not Found' for url 'https://api.github.com/repos/openhands-agent/.openhands'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+[92m19:30:16 - openhands:WARNING[0m: utils.py:298 - Added microagent stdio server: fetch
+[92m19:30:18 - openhands:WARNING[0m: agent_session.py:527 - State could not be restored: Could not restore state from session file for sid: fa6c4627ecd84b8cb8efc388f8ec0ba0
