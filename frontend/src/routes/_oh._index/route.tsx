@@ -10,13 +10,11 @@ import { TaskForm } from "#/components/shared/task-form";
 function Home() {
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const { data: config } = useConfig();
-  const { data: user } = useGitHubUser();
-
-  const gitHubAuthUrl = useGitHubAuthUrl({
-    appMode: config?.APP_MODE || null,
-    gitHubClientId: config?.GITHUB_CLIENT_ID || null,
-  });
+  const handleLaunchFromScratch = () => {
+    // This would typically start a new project from scratch
+    // For now, we'll just navigate to the workspace
+    navigate("/workspace");
+  };
 
   return (
     <div className="bg-base-secondary h-full rounded-xl flex flex-col items-center justify-center relative overflow-y-auto px-2">
@@ -36,6 +34,11 @@ function Home() {
         <div className="w-full flex justify-start mt-2 ml-2">
           <CodeNotInGitHubLink />
         </div>
+      </div>
+
+      {/* Launch From Scratch Button - Fixed at the top right */}
+      <div className="absolute top-6 right-6 w-48">
+        <LaunchFromScratchButton onClick={handleLaunchFromScratch} />
       </div>
     </div>
   );

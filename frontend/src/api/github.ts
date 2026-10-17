@@ -81,3 +81,14 @@ export const retrieveGitHubUserRepositories = async (
 
   return { data: response.data, nextPage };
 };
+
+/**
+ * Retrieves suggested tasks from GitHub for the authenticated user
+ * @returns A list of suggested tasks (PRs and issues)
+ */
+export const retrieveGitHubSuggestedTasks = async () => {
+  const response = await openHands.get<SuggestedTask[]>(
+    "/api/github/suggested-tasks",
+  );
+  return response.data;
+};
