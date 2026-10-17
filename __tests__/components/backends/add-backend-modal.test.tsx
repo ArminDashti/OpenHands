@@ -33,6 +33,23 @@ vi.mock("#/api/device-flow-client", async (importOriginal) => {
   };
 });
 
+const deviceFlowMocks = vi.hoisted(() => ({
+  startDeviceFlow: vi.fn(),
+  pollForToken: vi.fn(),
+}));
+
+// Partial mock: only the network calls are stubbed so the rest of the module
+// (host classification) keeps its production behavior.
+vi.mock("#/api/device-flow-client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("#/api/device-flow-client")>();
+  return {
+    ...actual,
+    startDeviceFlow: deviceFlowMocks.startDeviceFlow,
+    pollForToken: deviceFlowMocks.pollForToken,
+  };
+});
+
 vi.mock("@openhands/typescript-client/clients", () => ({
   ServerClient: vi.fn(function ServerClientMock() {
     return {
