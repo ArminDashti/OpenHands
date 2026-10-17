@@ -2982,6 +2982,28 @@ portalocker = [
 ]
 
 [[package]]
+name = "multi-swe-bench"
+version = "0.1.2"
+description = "Multi-SWE-bench: A Multilingual Benchmark for Issue Resolving"
+optional = false
+python-versions = ">=3.10"
+groups = ["evaluation"]
+files = [
+    {file = "multi_swe_bench-0.1.2-py3-none-any.whl", hash = "sha256:6e6cab26c026a3038109bdda7ea4366333cd210a0785bb138044f8917842e1d0"},
+    {file = "multi_swe_bench-0.1.2.tar.gz", hash = "sha256:ff78cce060a9483e90d571872eaf8625447be3054f4ddf8fae0ec9ea9b9f056a"},
+]
+
+[package.dependencies]
+dataclasses_json = "*"
+docker = "*"
+gitpython = "*"
+PyGithub = "*"
+pyyaml = "*"
+toml = "*"
+tqdm = "*"
+unidiff = "*"
+
+[[package]]
 name = "multidict"
 version = "6.0.5"
 description = "multidict implementation"
