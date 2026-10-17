@@ -30,6 +30,7 @@ export function ConversationCard({
 }: ProjectCardProps) {
   const [contextMenuVisible, setContextMenuVisible] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const { mutate: getTrajectory } = useGetTrajectory();
 
   const handleBlur = () => {
     if (inputRef.current?.value) {
