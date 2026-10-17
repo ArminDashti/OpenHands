@@ -46,6 +46,7 @@ Default ports:
   frontend:        3001 (falls back to a free port when busy)
   agent-server:    ${defaults.ports.agentServer}
   automation:      ${defaults.ports.automation}
+  frontend:        3001 (falls back to a free port when busy; override with --frontend-port)
 
 Override versions via environment variables:
   OH_AGENT_SERVER_VERSION, OH_AGENT_SERVER_GIT_REF, OH_AGENT_SERVER_LOCAL_PATH

@@ -64,6 +64,7 @@ import {
   buildAutomationTelemetryEnv,
   buildAutomationRuntimeServicesInfo,
   buildConfig,
+  buildCorsOrigins,
   buildRouteArgs,
   getAgentServerBaseUrl,
   getLocalServiceRoutes,

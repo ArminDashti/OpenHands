@@ -449,7 +449,7 @@ async function buildConfig(args, env = process.env) {
     process.exit(1);
   }
 
-  // Preferred ports (from env or defaults).
+  // Preferred ports (from args/env or defaults).
   // OH_CANVAS_SAFE_BACKEND_PORT / OH_CANVAS_SAFE_AUTOMATION_PORT /
   // OH_CANVAS_SAFE_VITE_PORT allow tests (and advanced users) to redirect
   // internal service ports without affecting the production default.
