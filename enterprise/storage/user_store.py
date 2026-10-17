@@ -6,9 +6,9 @@ import uuid
 from typing import Optional
 
 from server.logger import logger
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload
-from storage.database import session_maker
+from storage.database import a_session_maker, session_maker
 from storage.encrypt_utils import decrypt_legacy_model
 from storage.org import Org
 from storage.org_member import OrgMember
@@ -111,6 +111,10 @@ class UserStore:
 
             from storage.lite_llm_manager import LiteLlmManager
 
+            logger.info(
+                'user_store:migrate_user:calling_litellm_migrate_entries',
+                extra={'user_id': user_id},
+            )
             await LiteLlmManager.migrate_entries(
                 str(org.id),
                 user_id,
@@ -120,7 +124,15 @@ class UserStore:
             # avoids circular reference. This migrate method is temprorary until all users are migrated.
             from integrations.stripe_service import migrate_customer
 
+            logger.info(
+                'user_store:migrate_user:calling_stripe_migrate_customer',
+                extra={'user_id': user_id},
+            )
             await migrate_customer(session, user_id, org)
+            logger.info(
+                'user_store:migrate_user:done_stripe_migrate_customer',
+                extra={'user_id': user_id},
+            )
 
             from storage.org_store import OrgStore
 
@@ -142,7 +154,15 @@ class UserStore:
             )
             session.add(user)
 
-            role = RoleStore.get_role_by_name('owner')
+            logger.info(
+                'user_store:migrate_user:calling_get_role_by_name',
+                extra={'user_id': user_id},
+            )
+            role = await RoleStore.get_role_by_name_async('owner')
+            logger.info(
+                'user_store:migrate_user:done_get_role_by_name',
+                extra={'user_id': user_id},
+            )
 
             from storage.org_member_store import OrgMemberStore
 
@@ -162,6 +182,10 @@ class UserStore:
             user_settings.already_migrated = True
             session.merge(user_settings)
             session.flush()
+            logger.info(
+                'user_store:migrate_user:session_flush_complete',
+                extra={'user_id': user_id},
+            )
 
             # need to migrate conversation metadata
             session.execute(
@@ -229,6 +253,10 @@ class UserStore:
             session.commit()
             session.refresh(user)
             user.org_members  # load org_members
+            logger.info(
+                'user_store:migrate_user:session_committed',
+                extra={'user_id': user_id},
+            )
             return user
 
     @staticmethod
