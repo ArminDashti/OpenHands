@@ -38,6 +38,19 @@ logger = logging.getLogger(__name__)
 class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
     """Extended SQLAppConversationInfoService with user-based filtering and SAAS metadata handling."""
 
+    async def _get_effective_org_id(self) -> UUID | None:
+        """Resolve the effective org id for the active user context.
+
+        Returns the request's effective org id (X-Org-Id > api_key_org_id >
+        user.current_org_id) when the user is authenticated via SAAS auth,
+        otherwise falls back to the user's persisted current_org_id.
+        """
+        user_auth = getattr(self.user_context, 'user_auth', None)
+        if user_auth is not None and hasattr(user_auth, 'get_effective_org_id'):
+            return await user_auth.get_effective_org_id()
+        user = await self._get_current_user()
+        return user.current_org_id if user else None
+
     async def _secure_select(self):
         query = (
             select(StoredConversationMetadata)
