@@ -3,6 +3,9 @@ set -eo pipefail
 
 source "evaluation/utils/version_control.sh"
 
+# Get package runner (poetry run or uv run based on USE_UV env var)
+PKG_RUN=$(get_pkg_run)
+
 # configure browsing agent
 export USE_NAV="true"
 export USE_CONCISE_ANSWER="true"

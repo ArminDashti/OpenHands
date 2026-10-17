@@ -3,6 +3,9 @@ set -eo pipefail
 
 source "evaluation/utils/version_control.sh"
 
+# Get package runner (poetry run or uv run based on USE_UV env var)
+PKG_RUN=$(get_pkg_run)
+
 MODEL_CONFIG=$1
 
 get_openhands_version

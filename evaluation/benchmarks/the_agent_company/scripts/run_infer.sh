@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+# Package manager runner - uses UV if USE_UV=1, otherwise Poetry
+PKG_RUN=${PKG_RUN:-poetry run}
 ##################################################################################################
 # Adapted from https://github.com/TheAgentCompany/TheAgentCompany/blob/main/evaluation/run_eval.sh
 ##################################################################################################

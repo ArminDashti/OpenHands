@@ -1,6 +1,9 @@
 #!/bin/bash
 set -eo pipefail
 
+# Package manager runner - uses UV if USE_UV=1, otherwise Poetry
+PKG_RUN=${PKG_RUN:-poetry run}
+
 INPUT_FILE=$1
 NUM_WORKERS=$2
 DATASET=$3
