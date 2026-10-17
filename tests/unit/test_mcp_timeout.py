@@ -24,7 +24,7 @@ async def test_sse_connection_timeout():
     # Mock the MCPClient constructor to return our mock
     with mock.patch('openhands.mcp.mcp.MCPClient', return_value=mock_client):
         # Create a list of server URLs to test
-        sse_servers = ['http://server1:8080', 'http://server2:8080']
+        servers = ['http://server1:8080', 'http://server2:8080']
 
         # Call create_mcp_clients with the server URLs
         clients = await create_mcp_clients(

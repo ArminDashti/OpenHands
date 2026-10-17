@@ -4,11 +4,11 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, ValidationError
 
 
-class MCPSSEConfig(BaseModel):
-    """Configuration for MCP SSE (Server-Sent Events) settings.
+class MCPConfig(BaseModel):
+    """Configuration for MCP (Message Control Protocol) settings.
 
     Attributes:
-        mcp_servers: List of MCP server URLs.
+        mcp_servers: List of MCP SSE (Server-Sent Events) server URLs.
     """
 
     mcp_servers: List[str] = Field(default_factory=list)
