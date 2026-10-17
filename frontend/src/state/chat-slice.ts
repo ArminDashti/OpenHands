@@ -35,8 +35,6 @@ const HANDLED_ACTIONS: OpenHandsEventType[] = [
   "recall",
   "think",
   "system",
-  "call_tool_mcp",
-  "mcp",
 ];
 
 function getRiskText(risk: ActionSecurityRisk) {

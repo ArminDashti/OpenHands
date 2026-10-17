@@ -25,6 +25,7 @@ __all__ = [
     'OH_MAX_ITERATIONS',
     'AgentConfig',
     'AppConfig',
+    'MCPConfig',
     'LLMConfig',
     'SandboxConfig',
     'SearchConfig',

@@ -1,30 +1,27 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict
 
-from mcp import ClientSession
-from mcp.types import CallToolResult, TextContent, Tool
+from mcp.types import Tool
 
 from openhands.core.logger import openhands_logger as logger
 
 
-class BaseTool(ABC, Tool):
-    @classmethod
-    def postfix(cls) -> str:
-        return '_mcp_tool_call'
+class MCPClientTool(Tool):
+    """
+    Represents a tool proxy that can be called on the MCP server from the client side.
+    
+    This version doesn't store a session reference, as sessions are created on-demand
+    by the MCPClient for each operation.
+    """
 
     class Config:
         arbitrary_types_allowed = True
-
-    @abstractmethod
-    async def execute(self, **kwargs) -> CallToolResult:
-        """Execute the tool with given parameters."""
 
     def to_param(self) -> Dict:
         """Convert tool to function call format."""
         return {
             'type': 'function',
             'function': {
-                'name': self.name + self.postfix(),
+                'name': self.name,
                 'description': self.description,
                 'parameters': self.inputSchema,
             },

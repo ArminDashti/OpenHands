@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 import tempfile
@@ -9,6 +10,7 @@ from zipfile import ZipFile
 import requests
 
 from openhands.core.config import AppConfig
+from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig
 from openhands.core.exceptions import (
     AgentRuntimeTimeoutError,
 )

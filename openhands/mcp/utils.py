@@ -1,6 +1,7 @@
 from openhands.core.config.mcp_config import MCPConfig, MCPStdioConfigEntry
 from openhands.core.logger import openhands_logger as logger
 from openhands.mcp.client import MCPClient
+from openhands.runtime.base import Runtime
 
 
 def convert_mcp_clients_to_tools(mcp_clients: list[MCPClient] | None) -> list[dict]:
@@ -38,17 +39,17 @@ async def create_mcp_clients(
 ) -> list[MCPClient]:
     mcp_clients: list[MCPClient] = []
     # Initialize SSE connections
-    if mcp_servers:
-        for server_url in mcp_servers:
+    if sse_servers:
+        for server_config in sse_servers:
             logger.info(
-                f'Initializing MCP agent for {server_url} with SSE connection...'
+                f'Initializing MCP agent for {server_config.url} with SSE connection...'
             )
 
             client = MCPClient()
             try:
                 await client.connect_sse(server_url)
                 mcp_clients.append(client)
-                logger.info(f'Connected to MCP server {server_url} via SSE')
+                logger.info(f'Connected to MCP server {server_config.url} via SSE')
             except Exception as e:
                 logger.error(f'Failed to connect to {server_url}: {str(e)}')
                 # Don't raise the exception, just log it and continue
@@ -102,6 +103,7 @@ async def fetch_mcp_tools_from_config(mcp_config: MCPConfig) -> list[dict]:
 
     try:
         logger.debug(f'Creating MCP clients with config: {mcp_config}')
+        # Create clients - this will fetch tools but not maintain active connections
         mcp_clients = await create_mcp_clients(
             mcp_config.sse.mcp_servers,
             mcp_config.stdio.tools,
@@ -111,6 +113,7 @@ async def fetch_mcp_tools_from_config(mcp_config: MCPConfig) -> list[dict]:
             logger.debug('No MCP clients were successfully connected')
             return []
 
+        # Convert tools to the format expected by the agent
         mcp_tools = convert_mcp_clients_to_tools(mcp_clients)
     except Exception as e:
         logger.error(f'Error fetching MCP tools: {str(e)}')

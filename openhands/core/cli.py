@@ -112,8 +112,6 @@ async def main(loop: asyncio.AbstractEventLoop):
     display_message(f'Session ID: {sid}')
 
     agent = create_agent(config)
-    mcp_tools = await fetch_mcp_tools_from_config(config.mcp)
-    agent.set_mcp_tools(mcp_tools)
     runtime = create_runtime(
         config,
         sid=sid,
@@ -173,6 +171,7 @@ async def main(loop: asyncio.AbstractEventLoop):
     event_stream.subscribe(EventStreamSubscriber.MAIN, on_event, str(uuid4()))
 
     await runtime.connect()
+    await add_mcp_tools_to_agent(agent, runtime, config.mcp)
 
     # Initialize repository if needed
     if config.sandbox.selected_repo:
