@@ -46,6 +46,53 @@ async def batch_get_sandboxes(
     return sandboxes
 
 
+def _normalize_exposed_url(url: str) -> str:
+    return url.rstrip('/')
+
+
+def _is_allowed_worker_url(sandbox: SandboxInfo, url: str) -> bool:
+    """Only allow probing worker URLs already exposed for this sandbox."""
+    requested_url = _normalize_exposed_url(url)
+    return any(
+        exposed_url.name.startswith('WORKER_')
+        and _normalize_exposed_url(exposed_url.url) == requested_url
+        for exposed_url in sandbox.exposed_urls or []
+    )
+
+
+async def _probe_web_host(url: str) -> bool:
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(2.5),
+        ) as client:
+            async with client.stream('GET', url) as response:
+                return 200 <= response.status_code < 400
+    except httpx.HTTPError as exc:
+        _logger.debug('Web host probe failed for %s: %s', url, exc)
+        return False
+
+
+@router.get('/{sandbox_id}/web-host-status')
+async def get_web_host_status(
+    sandbox_id: str,
+    url: Annotated[str, Query()],
+    sandbox_service: SandboxService = sandbox_service_dependency,
+) -> WebHostStatusResponse:
+    """Check whether an exposed sandbox worker URL is serving a web app."""
+    sandbox = await sandbox_service.get_sandbox(sandbox_id)
+    if sandbox is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    if not _is_allowed_worker_url(sandbox, url):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail='URL is not an exposed worker URL for this sandbox',
+        )
+
+    return WebHostStatusResponse(reachable=await _probe_web_host(url))
+
+
 # Write Methods
 
 
