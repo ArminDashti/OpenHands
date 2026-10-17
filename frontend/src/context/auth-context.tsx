@@ -14,6 +14,8 @@ interface AuthContextProps extends React.PropsWithChildren {
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 function AuthProvider({ children, initialGithubTokenIsSet }: AuthContextProps) {
+  console.log("[AuthProvider] Initializing with initialGithubTokenIsSet:", initialGithubTokenIsSet);
+  
   const [githubTokenIsSet, setGitHubTokenIsSet] = React.useState(
     !!initialGithubTokenIsSet,
   );
