@@ -9,6 +9,7 @@ import { formatTimeDelta } from "#/utils/format-time-delta";
 import { I18nKey } from "#/i18n/declaration";
 import { ConversationStatusIndicator } from "./conversation-status-indicator";
 import RepoForkedIcon from "#/icons/repo-forked.svg?react";
+import { normalizeConversationId } from "#/utils/utils";
 
 interface RecentConversationProps {
   conversation: Conversation;
@@ -28,7 +29,9 @@ export function RecentConversation({ conversation }: RecentConversationProps) {
   );
 
   return (
-    <Link to={`/conversations/${conversation.conversation_id}`}>
+    <Link
+      to={`/conversations/${normalizeConversationId(conversation.conversation_id, conversation.conversation_version)}`}
+    >
       <button
         type="button"
         className="flex flex-col gap-1 p-[14px] cursor-pointer w-full rounded-lg hover:bg-[#5C5D62] transition-all duration-300"
