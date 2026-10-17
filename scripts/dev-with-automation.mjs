@@ -67,6 +67,7 @@ import {
   formatMissingUvxGuidance,
   validateFrontendDependencies,
   validateLocalAgentServerPath,
+  DEFAULT_VITE_PORT,
 } from "./dev-safe.mjs";
 import {
   createShutdownHookRegistry,
@@ -280,6 +281,7 @@ ENVIRONMENT VARIABLES:
   OH_AGENT_SERVER_LOCAL_PATH  Absolute path to a local software-agent-sdk checkout (highest precedence)
   OH_AGENT_SERVER_GIT_REF     Git ref for agent-server SDK (overrides default version)
   OH_AGENT_SERVER_VERSION     Specific PyPI version for agent-server
+  OH_CANVAS_SAFE_VITE_PORT    Frontend/Vite port (default: 3001; auto-falls back when busy)
   OH_SECRET_KEY               Secret key for sessions
 
 SECRETS:
@@ -1037,6 +1039,34 @@ function startAgentServer(config) {
       color: c.blue,
       parseLogLine: parseAgentServerLogLine,
     },
+  );
+}
+
+/**
+ * Build the AUTOMATION_CORS_ORIGINS value for a local dev stack.
+
+ * Allows the ingress and the (possibly auto-allocated frontend origin so
+ * direct access to the Vite/static server is permitted. An explicitly set
+ * AUTOMATION_CORS_ORIGINS env var wins over the derived value.
+
+
+
+ * @param {object} config - Launcher config (reads ingressPort,, vitePort)
+
+
+
+ * @param {Record<string, string | undefined>} [env] - Environment (default: process.env)
+
+
+
+
+ * @returns {string}
+
+ */
+export function buildAutomationCorsOrigins(config, env = process.env) {
+  return (
+    env.AUTOMATION_CORS_ORIGINS ||
+    `http://localhost:${config.ingressPort},http://127.0.0.1:${config.ingressPort},http://localhost:${config.vitePort},http://127.0.0.1:${config.vitePort}`
   );
 }
 

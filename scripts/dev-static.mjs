@@ -182,6 +182,8 @@ ENVIRONMENT VARIABLES:
                               requested port is busy, a free port is selected automatically.
   OH_AUTOMATION_GIT_REF       Alternative to --automation-ref
   OH_AGENT_SERVER_GIT_REF     Git ref for agent-server SDK
+  OH_CANVAS_SAFE_VITE_PORT    Frontend/static port (default: 3001; auto-falls back when busy)
+
   OH_SECRET_KEY               Secret key for sessions
 
 ACCESS POINTS:
@@ -418,9 +420,10 @@ function startStaticServer(config) {
   logService("static", `Starting on port ${config.vitePort}...`, c.magenta);
 
   // Mirror the proxy targets that vite.config.ts exposes in dev mode so that
-  // hitting :3001 directly behaves like Vite's dev server (e.g. /server_info
-  // is forwarded to the agent-server instead of falling back to the SPA
-  // shell). Without this, /server_info on :3001 returns index.html.
+  // hitting the frontend/static port directly behaves like Vite's dev server (e.g.
+  // /server_info is forwarded to the agent-server instead of falling back
+  // to the SPA shell). Without this, /server_info on the frontend port returns
+  // index.html.
   const staticServerScript = join(projectRoot, "scripts", "static-server.mjs");
   const runtimeServicesInfo = JSON.stringify(
     buildAutomationRuntimeServicesInfo({
