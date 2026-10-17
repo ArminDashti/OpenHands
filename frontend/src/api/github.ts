@@ -1,6 +1,11 @@
 import { extractNextPageFromLink } from "#/utils/extract-next-page-from-link";
 import { openHands } from "./open-hands-axios";
 
+export const isGitHubErrorReponse = <T extends object | Array<unknown>>(
+  data: T | GitHubErrorReponse | null,
+): data is GitHubErrorReponse =>
+  !!data && "message" in data && data.message !== undefined;
+
 /**
  * Retrieves repositories where OpenHands Github App has been installed
  * @param installationIndex Pagination cursor position for app installation IDs
