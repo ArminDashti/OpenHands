@@ -53,6 +53,7 @@ def get_analytics_service() -> AnalyticsService | None:
 
 __all__ = [
     'AnalyticsContext',
+    'user_has_analytics_consent',
     'AnalyticsService',
     'get_analytics_service',
     'init_analytics_service',

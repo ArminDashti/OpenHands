@@ -30,6 +30,36 @@ def _make_user_store_module(get_user_by_id_mock: AsyncMock) -> dict[str, ModuleT
     return {'storage': storage_mod, 'storage.user_store': user_store_mod}
 
 
+class TestUserHasAnalyticsConsent:
+    """Tests for app-mode-specific analytics consent resolution."""
+
+    def test_oss_uses_explicit_analytics_preference(self):
+        user = MagicMock()
+        user.user_consents_to_analytics = True
+        user.accepted_tos = None
+
+        with patch(
+            'openhands.app_server.shared.server_config.app_mode', AppMode.OPENHANDS
+        ):
+            assert user_has_analytics_consent(user) is True
+
+    def test_saas_uses_tos_acceptance_instead_of_stored_preference(self):
+        user = MagicMock()
+        user.user_consents_to_analytics = False
+        user.accepted_tos = object()
+
+        with patch('openhands.app_server.shared.server_config.app_mode', AppMode.SAAS):
+            assert user_has_analytics_consent(user) is True
+
+    def test_saas_without_tos_is_not_consented_even_when_preference_is_true(self):
+        user = MagicMock()
+        user.user_consents_to_analytics = True
+        user.accepted_tos = None
+
+        with patch('openhands.app_server.shared.server_config.app_mode', AppMode.SAAS):
+            assert user_has_analytics_consent(user) is False
+
+
 # ---------------------------------------------------------------------------
 # AnalyticsContext dataclass tests
 # ---------------------------------------------------------------------------
@@ -79,6 +109,7 @@ class TestResolveContext:
         """resolve_context with valid user_id returns AnalyticsContext with consented from user, org_id from user."""
         mock_user = MagicMock()
         mock_user.user_consents_to_analytics = True
+        mock_user.accepted_tos = object()
         mock_user.current_org_id = 'org-abc-123'
 
         modules = _make_user_store_module(AsyncMock(return_value=mock_user))
