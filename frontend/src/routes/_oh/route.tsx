@@ -59,20 +59,24 @@ export default function MainApp() {
     isError: authError,
   } = useIsAuthed();
 
+  // Always call the hook, but we'll only use the result when not on TOS page
   const gitHubAuthUrl = useGitHubAuthUrl({
     appMode: config.data?.APP_MODE || null,
     gitHubClientId: config.data?.GITHUB_CLIENT_ID || null,
   });
 
   React.useEffect(() => {
-    if (settings?.LANGUAGE) {
+    // Don't change language when on TOS page
+    if (!isOnTosPage && settings?.LANGUAGE) {
       i18n.changeLanguage(settings.LANGUAGE);
     }
-  }, [settings?.LANGUAGE]);
+  }, [settings?.LANGUAGE, isOnTosPage]);
 
   React.useEffect(() => {
-    const consentFormModalIsOpen =
-      settings?.USER_CONSENTS_TO_ANALYTICS === null;
+    // Don't show consent form when on TOS page
+    if (!isOnTosPage) {
+      const consentFormModalIsOpen =
+        settings?.USER_CONSENTS_TO_ANALYTICS === null;
 
     setConsentFormIsOpen(consentFormModalIsOpen);
   }, [settings]);

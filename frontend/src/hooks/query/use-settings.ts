@@ -6,6 +6,16 @@ import { DEFAULT_SETTINGS, getLocalStorageSettings } from "#/services/settings";
 import OpenHands from "#/api/open-hands";
 import { useIsAuthed } from "./use-is-authed";
 
+// Instead of directly using useLocation, we'll check the current path manually
+// This avoids the Router context requirement
+const isOnTosPage = () => {
+  // Only run this check in browser environment
+  if (typeof window !== "undefined") {
+    return window.location.pathname === "/accept-tos";
+  }
+  return false;
+};
+
 const getSettingsQueryFn = async () => {
   try {
     const apiSettings = await OpenHands.getSettings();
