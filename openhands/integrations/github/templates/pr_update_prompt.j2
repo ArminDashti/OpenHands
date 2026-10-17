@@ -1,3 +1,6 @@
+{% extends "resolver/pr_update_base.j2" %}
+
+{% block pr_context %}
 You are checked out to branch {{ branch_name }}, which has an open PR #{{ pr_number }}.
 A comment on the PR (below) has been addressed to you. Do NOT respond to this comment via the GitHub API.
 
@@ -8,6 +11,7 @@ A comment on the PR (below) has been addressed to you. Do NOT respond to this co
 
 
 # Steps to Handle the Comment
+{% endblock %}
 
 ## Understand the PR Context
 Use the GitHub API to:
