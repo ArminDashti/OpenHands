@@ -32,7 +32,6 @@ describe("Home Screen", () => {
 
   const RouterStub = createRoutesStub([
     {
-      // layout route
       Component: MainApp,
       path: "/",
       children: [
