@@ -12,6 +12,7 @@ import * as GitService from "#/api/git";
 import { GitRepository } from "#/types/git";
 import SettingsService from "#/settings-service/settings-service.api";
 import OpenHands from "#/api/open-hands";
+import UserService from "#/api/user-service/user-service.api";
 import MainApp from "#/routes/root-layout";
 
 const createAxiosNotFoundErrorObject = () =>
