@@ -7,6 +7,9 @@ from uuid import UUID
 
 from storage.database import session_maker
 from storage.org_member import OrgMember
+from storage.user_settings import UserSettings
+
+from openhands.storage.data_models.settings import Settings
 
 
 class OrgMemberStore:
@@ -57,6 +60,13 @@ class OrgMemberStore:
             return session.query(OrgMember).filter(OrgMember.org_id == org_id).all()
 
     @staticmethod
+    def update_org_member(org_member: OrgMember) -> None:
+        """Update an organization-member relationship."""
+        with session_maker() as session:
+            session.merge(org_member)
+            session.commit()
+
+    @staticmethod
     def update_user_role_in_org(
         org_id: UUID, user_id: int, role_id: int, status: Optional[str] = None
     ) -> Optional[OrgMember]:
@@ -95,3 +105,21 @@ class OrgMemberStore:
             session.delete(org_member)
             session.commit()
             return True
+
+    @staticmethod
+    def get_kwargs_from_settings(settings: Settings):
+        kwargs = {
+            normalized: getattr(settings, normalized)
+            for c in OrgMember.__table__.columns
+            if (normalized := c.name.lstrip('_')) and hasattr(settings, normalized)
+        }
+        return kwargs
+
+    @staticmethod
+    def get_kwargs_from_user_settings(user_settings: UserSettings):
+        kwargs = {
+            normalized: getattr(user_settings, normalized)
+            for c in OrgMember.__table__.columns
+            if (normalized := c.name.lstrip('_')) and hasattr(user_settings, normalized)
+        }
+        return kwargs

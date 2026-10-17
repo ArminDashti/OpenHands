@@ -6,8 +6,8 @@ from uuid import UUID
 
 from fastapi import Request
 from sqlalchemy import func, select
-from storage.stored_conversation_metadata import StoredConversationMetadata
 from storage.stored_conversation_metadata_saas import StoredConversationMetadataSaas
+from storage.user import User
 
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
@@ -20,6 +20,7 @@ from openhands.app_server.app_conversation.app_conversation_models import (
 )
 from openhands.app_server.app_conversation.sql_app_conversation_info_service import (
     SQLAppConversationInfoService,
+    StoredConversationMetadata,
 )
 from openhands.app_server.services.injector import InjectorState
 
@@ -74,9 +75,17 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
         sort_order: AppConversationSortOrder = AppConversationSortOrder.CREATED_AT_DESC,
         page_id: str | None = None,
         limit: int = 100,
+        include_sub_conversations: bool = False,
     ) -> AppConversationInfoPage:
         """Search for conversations with user_id from SAAS metadata."""
         query = await self._secure_select_with_saas_metadata()
+
+        # Conditionally exclude sub-conversations based on the parameter
+        if not include_sub_conversations:
+            # Exclude sub-conversations (only include top-level conversations)
+            query = query.where(
+                StoredConversationMetadata.parent_conversation_id.is_(None)
+            )
 
         query = self._apply_filters_with_saas_metadata(
             query=query,
@@ -273,6 +282,10 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
         if user_id_str:
             # Convert string user_id to UUID
             user_id_uuid = UUID(user_id_str)
+            user_query = select(User).where(User.id == user_id_uuid)
+            result = await self.db_session.execute(user_query)
+            user = result.scalar_one_or_none()
+            assert user
 
             # Check if SAAS metadata already exists
             saas_query = select(StoredConversationMetadataSaas).where(
@@ -280,20 +293,18 @@ class SaasSQLAppConversationInfoService(SQLAppConversationInfoService):
             )
             result = await self.db_session.execute(saas_query)
             existing_saas_metadata = result.scalar_one_or_none()
+            assert existing_saas_metadata is None or (
+                existing_saas_metadata.user_id == user_id_uuid
+                and existing_saas_metadata.org_id == user.current_org_id
+            )
 
-            if existing_saas_metadata:
-                # Update existing SAAS metadata
-                existing_saas_metadata.user_id = user_id_uuid
-                # Keep existing org_id or set to user_id if not specified
-                if not existing_saas_metadata.org_id:
-                    existing_saas_metadata.org_id = user_id_uuid
-            else:
+            if not existing_saas_metadata:
                 # Create new SAAS metadata
                 # Set org_id to user_id as specified in requirements
                 saas_metadata = StoredConversationMetadataSaas(
                     conversation_id=str(info.id),
                     user_id=user_id_uuid,
-                    org_id=user_id_uuid,  # Set org_id to user_id as it will not be specified
+                    org_id=user.current_org_id,
                 )
                 self.db_session.add(saas_metadata)
 

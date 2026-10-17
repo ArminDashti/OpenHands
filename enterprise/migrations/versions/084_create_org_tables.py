@@ -1,7 +1,7 @@
 """create org tables from pgerd schema
 
-Revision ID: 080
-Revises: 079
+Revision ID: 084
+Revises: 083
 Create Date: 2025-01-07 00:00:00.000000
 
 """
@@ -13,21 +13,25 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '080'
-down_revision: Union[str, None] = '079'
+revision: str = '084'
+down_revision: Union[str, None] = '083'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto;')
     # Remove current settings table
     op.execute('DROP TABLE IF EXISTS settings')
 
-    # Add migration_status column to user_settings table
+    # Add already_migrated column to user_settings table
     op.add_column(
         'user_settings',
-        sa.Column('migration_status', sa.Boolean, nullable=True, default=False),
+        sa.Column(
+            'already_migrated',
+            sa.Boolean,
+            nullable=True,
+            server_default=sa.text('false'),
+        ),
     )
 
     # Create role table
@@ -40,10 +44,9 @@ def upgrade() -> None:
     )
 
     # 1. Create default roles
-    print('Creating default roles...')
     op.execute(
         sa.text("""
-        INSERT INTO role (name, rank) VALUES ('admin', 1), ('user', 1000)
+        INSERT INTO role (name, rank) VALUES ('owner', 10), ('admin', 20), ('user', 1000)
         ON CONFLICT (name) DO NOTHING;
     """)
     )
@@ -55,7 +58,6 @@ def upgrade() -> None:
             'id',
             postgresql.UUID(as_uuid=True),
             primary_key=True,
-            server_default=sa.text('gen_random_uuid()'),
         ),
         sa.Column('name', sa.String, nullable=False),
         sa.Column('contact_name', sa.String, nullable=True),
@@ -65,29 +67,45 @@ def upgrade() -> None:
         sa.Column('agent', sa.String, nullable=True),
         sa.Column('default_max_iterations', sa.Integer, nullable=True),
         sa.Column('security_analyzer', sa.String, nullable=True),
-        sa.Column('confirmation_mode', sa.Boolean, nullable=True, default=False),
+        sa.Column(
+            'confirmation_mode',
+            sa.Boolean,
+            nullable=True,
+            server_default=sa.text('false'),
+        ),
         sa.Column('default_llm_model', sa.String, nullable=True),
         sa.Column('_default_llm_api_key_for_byor', sa.String, nullable=True),
         sa.Column('default_llm_base_url', sa.String, nullable=True),
         sa.Column('remote_runtime_resource_factor', sa.Integer, nullable=True),
-        sa.Column('enable_default_condenser', sa.Boolean, nullable=False, default=True),
+        sa.Column(
+            'enable_default_condenser',
+            sa.Boolean,
+            nullable=False,
+            server_default=sa.text('true'),
+        ),
         sa.Column('billing_margin', sa.Float, nullable=True),
         sa.Column(
             'enable_proactive_conversation_starters',
             sa.Boolean,
             nullable=False,
-            default=True,
+            server_default=sa.text('true'),
         ),
         sa.Column('sandbox_base_container_image', sa.String, nullable=True),
         sa.Column('sandbox_runtime_container_image', sa.String, nullable=True),
-        sa.Column('org_version', sa.Integer, nullable=False, default=0),
+        sa.Column(
+            'org_version', sa.Integer, nullable=False, server_default=sa.text('0')
+        ),
         sa.Column('mcp_config', sa.JSON, nullable=True),
         sa.Column('_search_api_key', sa.String, nullable=True),
         sa.Column('_sandbox_api_key', sa.String, nullable=True),
         sa.Column('max_budget_per_task', sa.Float, nullable=True),
         sa.Column(
-            'enable_solvability_analysis', sa.Boolean, nullable=True, default=False
+            'enable_solvability_analysis',
+            sa.Boolean,
+            nullable=True,
+            server_default=sa.text('false'),
         ),
+        sa.Column('v1_enabled', sa.Boolean, nullable=True),
         sa.UniqueConstraint('name', name='org_name_unique'),
     )
 
@@ -98,13 +116,15 @@ def upgrade() -> None:
             'id',
             postgresql.UUID(as_uuid=True),
             primary_key=True,
-            server_default=sa.text('gen_random_uuid()'),
         ),
         sa.Column('current_org_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('role_id', sa.Integer, nullable=True),
         sa.Column('accepted_tos', sa.DateTime, nullable=True),
         sa.Column(
-            'enable_sound_notifications', sa.Boolean, nullable=True, default=False
+            'enable_sound_notifications',
+            sa.Boolean,
+            nullable=True,
+            server_default=sa.text('false'),
         ),
         sa.Column('language', sa.String, nullable=True),
         sa.Column('user_consents_to_analytics', sa.Boolean, nullable=True),
@@ -208,8 +228,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Drop migration_status column from user_settings table
-    op.drop_column('user_settings', 'migration_status')
+    # Drop already_migrated column from user_settings table
+    op.drop_column('user_settings', 'already_migrated')
 
     # Drop foreign keys and columns added to existing tables
     op.drop_constraint(

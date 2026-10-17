@@ -24,6 +24,9 @@ from datetime import UTC, datetime
 from typing import Any, AsyncGenerator
 from uuid import UUID
 
+if TYPE_CHECKING:
+    from openhands.app_server.user.user_context import UserContext
+
 from fastapi import Request
 from sqlalchemy import (
     Column,
@@ -48,7 +51,6 @@ from openhands.app_server.app_conversation.app_conversation_models import (
     AppConversationSortOrder,
 )
 from openhands.app_server.services.injector import InjectorState
-from openhands.app_server.user.user_context import UserContext
 from openhands.app_server.utils.sql_utils import (
     Base,
     create_json_type_decorator,
@@ -310,7 +312,7 @@ class SQLAppConversationInfoService(AppConversationInfoService):
             last_updated_at=info.updated_at,
             created_at=info.created_at,
             trigger=info.trigger.value if info.trigger else None,
-            pr_number=info.pr_number,
+            pr_number=info.pr_number or [],
             # Cost and token metrics
             accumulated_cost=metrics.accumulated_cost,
             prompt_tokens=usage.prompt_tokens,

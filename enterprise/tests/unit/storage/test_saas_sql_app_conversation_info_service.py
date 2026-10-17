@@ -24,6 +24,108 @@ from sqlalchemy.pool import StaticPool
 from enterprise.storage.saas_app_conversation_info_injector import (
     SaasSQLAppConversationInfoService,
 )
+from openhands.app_server.app_conversation.sql_app_conversation_info_service import (
+    StoredConversationMetadata,
+)
+from openhands.app_server.app_conversation.app_conversation_models import (
+    AppConversationInfo,
+)
+from openhands.app_server.user.specifiy_user_context import SpecifyUserContext
+from openhands.app_server.utils.sql_utils import Base
+from openhands.integrations.service_types import ProviderType
+from openhands.storage.data_models.conversation_metadata import ConversationTrigger
+
+
+@pytest.fixture
+async def async_engine():
+    """Create an async SQLite engine for testing."""
+    engine = create_async_engine(
+        'sqlite+aiosqlite:///:memory:',
+        poolclass=StaticPool,
+        connect_args={'check_same_thread': False},
+        echo=False,
+    )
+
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield engine
+
+    await engine.dispose()
+
+
+@pytest.fixture
+async def async_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Create an async session for testing."""
+    async_session_maker = async_sessionmaker(
+        async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async with async_session_maker() as db_session:
+        yield db_session
+
+
+@pytest.fixture
+def service(async_session) -> SaasSQLAppConversationInfoService:
+    """Create a SQLAppConversationInfoService instance for testing."""
+    return SaasSQLAppConversationInfoService(
+        db_session=async_session, user_context=SpecifyUserContext(user_id=None)
+    )
+
+
+@pytest.fixture
+def service_with_user(async_session) -> SaasSQLAppConversationInfoService:
+    """Create a SQLAppConversationInfoService instance with a user_id for testing."""
+    return SaasSQLAppConversationInfoService(
+        db_session=async_session,
+        user_context=SpecifyUserContext(user_id='a1111111-1111-1111-1111-111111111111'),
+    )
+
+
+@pytest.fixture
+def sample_conversation_info() -> AppConversationInfo:
+    """Create a sample AppConversationInfo for testing."""
+    return AppConversationInfo(
+        id=uuid4(),
+        created_by_user_id='a1111111-1111-1111-1111-111111111111',
+        sandbox_id='sandbox_123',
+        selected_repository='https://github.com/test/repo',
+        selected_branch='main',
+        git_provider=ProviderType.GITHUB,
+        title='Test Conversation',
+        trigger=ConversationTrigger.GUI,
+        pr_number=[123, 456],
+        llm_model='gpt-4',
+        metrics=None,
+        created_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        updated_at=datetime(2024, 1, 1, 12, 30, 0, tzinfo=timezone.utc),
+    )
+
+
+@pytest.fixture
+def multiple_conversation_infos() -> list[AppConversationInfo]:
+    """Create multiple AppConversationInfo instances for testing."""
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+    return [
+        AppConversationInfo(
+            id=uuid4(),
+            created_by_user_id=None,
+            sandbox_id=f'sandbox_{i}',
+            selected_repository=f'https://github.com/test/repo{i}',
+            selected_branch='main',
+            git_provider=ProviderType.GITHUB,
+            title=f'Test Conversation {i}',
+            trigger=ConversationTrigger.GUI,
+            pr_number=[i * 100],
+            llm_model='gpt-4',
+            metrics=None,
+            created_at=base_time.replace(hour=12 + i),
+            updated_at=base_time.replace(hour=12 + i, minute=30),
+        )
+        for i in range(1, 6)  # Create 5 conversations
+    ]
 
 
 @pytest.fixture
@@ -127,13 +229,13 @@ def mock_db_session():
 @pytest.fixture
 def user1_context():
     """Create user context for user1."""
-    return SpecifyUserContext(user_id='11111111-1111-1111-1111-111111111111')
+    return SpecifyUserContext(user_id='a1111111-1111-1111-1111-111111111111')
 
 
 @pytest.fixture
 def user2_context():
     """Create user context for user2."""
-    return SpecifyUserContext(user_id='22222222-2222-2222-2222-222222222222')
+    return SpecifyUserContext(user_id='b2222222-2222-2222-2222-222222222222')
 
 
 @pytest.fixture
@@ -203,6 +305,7 @@ class TestSaasSQLAppConversationInfoService:
         # Create mock metadata objects
         stored_metadata = MagicMock(spec=StoredConversationMetadata)
         stored_metadata.conversation_id = '12345678-1234-5678-1234-567812345678'
+        stored_metadata.parent_conversation_id = None
         stored_metadata.title = 'Test Conversation'
         stored_metadata.sandbox_id = 'test-sandbox'
         stored_metadata.selected_repository = None
@@ -235,7 +338,7 @@ class TestSaasSQLAppConversationInfoService:
         )
 
         # Verify that the user_id from SAAS metadata is used
-        assert result.created_by_user_id == '11111111-1111-1111-1111-111111111111'
+        assert result.created_by_user_id == 'a1111111-1111-1111-1111-111111111111'
         assert result.title == 'Test Conversation'
         assert result.sandbox_id == 'test-sandbox'
 

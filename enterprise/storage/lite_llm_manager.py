@@ -21,6 +21,7 @@ from server.logger import logger
 from storage.user_settings import UserSettings
 
 from openhands.server.settings import Settings
+from openhands.utils.async_utils import call_sync_from_async
 
 
 class LiteLlmManager:
@@ -94,14 +95,8 @@ class LiteLlmManager:
             logger.warning('LiteLLM API configuration not found')
             return None
         local_deploy = os.environ.get('LOCAL_DEPLOYMENT', None)
-        key = LITE_LLM_API_KEY
         if not local_deploy:
             # Get user info to add to litellm
-            token_manager = TokenManager()
-            keycloak_user_info = (
-                await token_manager.get_user_info_from_user_id(keycloak_user_id) or {}
-            )
-
             async with httpx.AsyncClient(
                 headers={
                     'x-goog-api-key': LITE_LLM_API_KEY,
@@ -122,28 +117,33 @@ class LiteLlmManager:
                     client, keycloak_user_id, org_id, credits
                 )
 
-                await LiteLlmManager._delete_user(client, keycloak_user_id)
-
-                await LiteLlmManager._create_user(
-                    client, keycloak_user_info.get('email'), keycloak_user_id
+                await LiteLlmManager._update_user(
+                    client, keycloak_user_id, max_budget=1000000000.0
                 )
 
                 await LiteLlmManager._add_user_to_team(
                     client, keycloak_user_id, org_id, credits
                 )
 
-                key = await LiteLlmManager._generate_key(
-                    client,
-                    keycloak_user_id,
-                    org_id,
-                    f'OpenHands Cloud - user {keycloak_user_id}',
-                    None,
-                )
+                if user_settings.llm_api_key:
+                    await LiteLlmManager._update_key(
+                        client,
+                        keycloak_user_id,
+                        user_settings.llm_api_key,
+                        team_id=org_id,
+                    )
+
+                if user_settings.llm_api_key_for_byor:
+                    await LiteLlmManager._update_key(
+                        client,
+                        keycloak_user_id,
+                        user_settings.llm_api_key_for_byor,
+                        team_id=org_id,
+                    )
 
         user_settings.agent = 'CodeActAgent'
         # Use the model corresponding to the current user settings version
         user_settings.llm_model = get_default_litellm_model()
-        user_settings.llm_api_key = SecretStr(key)
         user_settings.llm_base_url = LITE_LLM_API_URL
         return user_settings
 
@@ -212,7 +212,7 @@ class LiteLlmManager:
                 extra={
                     'status_code': response.status_code,
                     'text': response.text,
-                    'team_id': [team_id],
+                    'team_id': team_id,
                     'max_budget': max_budget,
                 },
             )
@@ -290,6 +290,10 @@ class LiteLlmManager:
                 'teams': [LITE_LLM_TEAM_ID],
                 'auto_create_key': False,
                 'send_invite_email': False,
+                'metadata': {
+                    'version': ORG_SETTINGS_VERSION,
+                    'model': get_default_litellm_model(),
+                },
             },
         )
         if not response.is_success:
@@ -310,6 +314,10 @@ class LiteLlmManager:
                     'teams': [LITE_LLM_TEAM_ID],
                     'auto_create_key': False,
                     'send_invite_email': False,
+                    'metadata': {
+                        'version': ORG_SETTINGS_VERSION,
+                        'model': get_default_litellm_model(),
+                    },
                 },
             )
 
@@ -345,19 +353,20 @@ class LiteLlmManager:
     async def _update_user(
         client: httpx.AsyncClient,
         keycloak_user_id: str,
+        **kwargs,
     ):
         if LITE_LLM_API_KEY is None or LITE_LLM_API_URL is None:
             logger.warning('LiteLLM API configuration not found')
             return
+
+        payload = {
+            'user_id': keycloak_user_id,
+        }
+        payload.update(kwargs)
+
         response = await client.post(
             f'{LITE_LLM_API_URL}/user/update',
-            json={
-                'user_id': keycloak_user_id,
-                'metadata': {
-                    'version': ORG_SETTINGS_VERSION,
-                    'model': get_default_litellm_model(),
-                },
-            },
+            json=payload,
         )
 
         if not response.is_success:
@@ -366,8 +375,39 @@ class LiteLlmManager:
                 extra={
                     'status_code': response.status_code,
                     'text': response.text,
-                    'user_id': [keycloak_user_id],
-                    'email': None,
+                    'user_id': keycloak_user_id,
+                },
+            )
+        response.raise_for_status()
+
+    @staticmethod
+    async def _update_key(
+        client: httpx.AsyncClient,
+        keycloak_user_id: str,
+        key: str,
+        **kwargs,
+    ):
+        if LITE_LLM_API_KEY is None or LITE_LLM_API_URL is None:
+            logger.warning('LiteLLM API configuration not found')
+            return
+
+        payload = {
+            'key': key,
+        }
+        payload.update(kwargs)
+
+        response = await client.post(
+            f'{LITE_LLM_API_URL}/key/update',
+            json=payload,
+        )
+
+        if not response.is_success:
+            logger.error(
+                'error_updating_litellm_key',
+                extra={
+                    'status_code': response.status_code,
+                    'text': response.text,
+                    'user_id': keycloak_user_id,
                 },
             )
         response.raise_for_status()
@@ -521,9 +561,9 @@ class LiteLlmManager:
                 extra={
                     'status_code': response.status_code,
                     'text': response.text,
-                    'user_id': [keycloak_user_id],
-                    'team_id': [team_id],
-                    'key_alias': [key_alias],
+                    'user_id': keycloak_user_id,
+                    'team_id': team_id,
+                    'key_alias': key_alias,
                 },
             )
         response.raise_for_status()
@@ -533,8 +573,8 @@ class LiteLlmManager:
             'LiteLlmManager:_lite_llm_generate_user_team_key:key_created',
             extra={
                 'user_id': keycloak_user_id,
-                'team_id': [team_id],
-                'key_alias': [key_alias],
+                'team_id': team_id,
+                'key_alias': key_alias,
             },
         )
         return key
@@ -542,7 +582,7 @@ class LiteLlmManager:
     @staticmethod
     async def _get_key_info(
         client: httpx.AsyncClient,
-        org_id: int,
+        org_id: str,
         keycloak_user_id: str,
     ) -> dict | None:
         from storage.user_store import UserStore
@@ -550,7 +590,7 @@ class LiteLlmManager:
         if LITE_LLM_API_KEY is None or LITE_LLM_API_URL is None:
             logger.warning('LiteLLM API configuration not found')
             return None
-        user = UserStore.get_user_by_id(keycloak_user_id)
+        user = await call_sync_from_async(UserStore.get_user_by_id, keycloak_user_id)
         if not user:
             return {}
 
