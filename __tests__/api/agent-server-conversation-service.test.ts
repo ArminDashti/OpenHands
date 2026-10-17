@@ -1,3 +1,4 @@
+import { supportsConversationRuntimeRoutes } from "#/api/agent-server-client-options";
 import {
   ConversationClient,
   FileClient,

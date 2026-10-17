@@ -227,7 +227,7 @@ export function LocalNewConversationMenu({
             <li>
               <button
                 type="button"
-                disabled={isCreating}
+                disabled={isCreating || clientUnsupported}
                 data-testid="launch-no-workspace"
                 onClick={() => launch()}
                 className={itemClass}
