@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -135,7 +136,12 @@ class RemoteSandboxService(SandboxService):
             _logger.error(f'No response received within timeout for URL: {url}')
             raise
         except httpx.HTTPError as e:
-            _logger.error(f'HTTP error for URL {url}: {e}')
+            if self.reuse_httpx_client:
+                _logger.warning(
+                    f'HTTP error for URL {url}: {e}. Disabling httpx client reuse to '
+                    'force fresh DNS resolution for future requests.'
+                )
+            self.reuse_httpx_client = False
             raise
 
     async def _to_sandbox_info(
@@ -177,6 +183,7 @@ class RemoteSandboxService(SandboxService):
             status = SandboxStatus.MISSING
             exposed_urls = None
 
+        _logger.info(f'exposed_urls: {exposed_urls}')
         sandbox_spec_id = stored.sandbox_spec_id
         return SandboxInfo(
             id=stored.id,
@@ -306,8 +313,10 @@ class RemoteSandboxService(SandboxService):
 
     async def get_sandbox(self, sandbox_id: str) -> Union[SandboxInfo, None]:
         """Get a single sandbox by checking its corresponding runtime."""
+        _logger.info(f'Getting sandbox with id: {sandbox_id}', stack_info=True)
         stored_sandbox = await self._get_stored_sandbox(sandbox_id)
         if stored_sandbox is None:
+            _logger.info('Got sandbox: None')
             return None
         return await self._to_sandbox_info(stored_sandbox)
 
