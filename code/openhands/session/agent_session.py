@@ -157,6 +157,11 @@ class AgentSession:
             if custom_secrets:
                 custom_secrets_handler.set_event_stream_secrets(self.event_stream)
 
+            # Determine working directory - use runtime's workspace_root if available, otherwise fallback to config
+            working_dir = config.workspace_mount_path_in_sandbox
+            if self.runtime is not None:
+                working_dir = str(self.runtime.workspace_root)
+
             self.memory = await self._create_memory(
                 selected_repository=selected_repository,
                 repo_directory=repo_directory,
