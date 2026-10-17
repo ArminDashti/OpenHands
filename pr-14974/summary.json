@@ -1,0 +1,44 @@
+{
+  "scenario": "org-invite",
+  "baseUrl": "http://localhost:3002",
+  "out": "/tmp/uiverify-orginvite",
+  "loginMode": "none",
+  "durationMs": 7059,
+  "success": true,
+  "failure": null,
+  "pageError": null,
+  "screenshotCount": 4,
+  "consoleErrorCount": 10,
+  "networkErrorCount": 17,
+  "steps": [
+    {
+      "at": 264,
+      "kind": "note",
+      "message": "login mode 'none' (mock SaaS) — skipping authentication"
+    },
+    {
+      "at": 1567,
+      "kind": "screenshot",
+      "name": "org-members-page",
+      "file": "/tmp/uiverify-orginvite/screenshots/001-org-members-page.png"
+    },
+    {
+      "at": 6811,
+      "kind": "screenshot",
+      "name": "invite-modal-open",
+      "file": "/tmp/uiverify-orginvite/screenshots/002-invite-modal-open.png"
+    },
+    {
+      "at": 6860,
+      "kind": "screenshot",
+      "name": "invite-emails-entered",
+      "file": "/tmp/uiverify-orginvite/screenshots/003-invite-emails-entered.png"
+    },
+    {
+      "at": 6960,
+      "kind": "screenshot",
+      "name": "invite-result",
+      "file": "/tmp/uiverify-orginvite/screenshots/004-invite-result.png"
+    }
+  ]
+}
