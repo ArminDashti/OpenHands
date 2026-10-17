@@ -639,6 +639,7 @@ class TestModifyLLMSettingsBasic:
         mock_get_models.return_value = [
             'openhands/claude-sonnet-4-20250514',
             'openhands/claude-opus-4-20250514',
+            'openhands/gpt-5-codex',
             'openhands/o3',
         ]
         mock_organize.return_value = {
@@ -646,6 +647,7 @@ class TestModifyLLMSettingsBasic:
                 'models': [
                     'claude-sonnet-4-20250514',
                     'claude-opus-4-20250514',
+                    'gpt-5-codex',
                     'o3',
                 ],
                 'separator': '/',
