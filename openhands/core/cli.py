@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from uuid import uuid4
 
@@ -40,6 +41,8 @@ from openhands.io import read_input, read_task
 
 
 def display_message(message: str):
+    if not message:
+        return
     print(colored('🤖 ' + message + '\n', 'yellow'))
 
 
@@ -67,7 +70,8 @@ def display_command_output(output: str):
 
 
 def display_file_edit(event: FileEditAction | FileEditObservation):
-    print(colored(str(event), 'green'))
+    # print(colored(str(event), 'green'))
+    pass
 
 
 def display_event(event: Event, config: AppConfig):
@@ -77,13 +81,11 @@ def display_event(event: Event, config: AppConfig):
     if isinstance(event, MessageAction):
         if event.source == EventSource.AGENT:
             display_message(event.content)
-    if isinstance(event, CmdRunAction):
+    elif isinstance(event, CmdRunAction):
         display_command(event.command)
-    if isinstance(event, CmdOutputObservation):
+    elif isinstance(event, CmdOutputObservation):
         display_command_output(event.content)
-    if isinstance(event, FileEditAction):
-        display_file_edit(event)
-    if isinstance(event, FileEditObservation):
+    elif isinstance(event, FileEditAction):
         display_file_edit(event)
     if hasattr(event, 'confirmation_state') and config.security.confirmation_mode:
         display_confirmation(event.confirmation_state)
@@ -188,6 +190,11 @@ async def main(loop: asyncio.AbstractEventLoop):
     await run_agent_until_done(
         controller, runtime, [AgentState.STOPPED, AgentState.ERROR]
     )
+
+    # Stop file watcher if it was started
+    if args.watch and 'file_watcher' in locals():
+        print('Stopping file watcher...')
+        file_watcher.stop()
 
 
 if __name__ == '__main__':
