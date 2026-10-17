@@ -59,6 +59,8 @@ import {
   buildAgentServerEnv,
   buildNpmScriptCommand,
   buildRuntimeServicesInfo,
+  DEFAULT_VITE_PORT,
+  findFreePort,
   formatMissingUvxGuidance,
   validateFrontendDependencies,
   validateLocalAgentServerPath,
@@ -443,18 +445,21 @@ async function buildConfig(args, env = process.env) {
     parseInt(env.OH_CANVAS_SAFE_BACKEND_PORT, 10) || DEFAULT_BACKEND_PORT;
   const preferredAutomationPort =
     parseInt(env.OH_CANVAS_SAFE_AUTOMATION_PORT, 10) || DEFAULT_AUTOMATION_PORT;
-  const preferredVitePort = parseInt(env.OH_CANVAS_SAFE_VITE_PORT, 10) || 3001;
+  const preferredVitePort =
+    parseInt(env.OH_CANVAS_SAFE_VITE_PORT, 10) || DEFAULT_VITE_PORT;
 
-  // Fail fast if any preferred port for a service in this mode is already in use.
+  // Fail fast if any hard-required port for a service in this mode is already
+  // in use. The ingress (and the backend/automation ports) act as concurrent
+  // instance detection, so they remain hard failures rather than silently
+  // moving (#16904). The frontend port is the exception: a non-agent-canvas
+  // process commonly owns the default 3001, so the preferred frontend port
+  // falls back to a free port below instead of aborting startup.
   const requiredPorts = [{ name: "ingress", port: preferredIngressPort }];
   if (launchAgentServer) {
     requiredPorts.push({ name: "agent-server", port: preferredBackendPort });
   }
   if (launchAutomation) {
     requiredPorts.push({ name: "automation", port: preferredAutomationPort });
-  }
-  if (launchFrontend) {
-    requiredPorts.push({ name: "frontend", port: preferredVitePort });
   }
 
   logStep("ports", "Checking ports...");
@@ -515,7 +520,7 @@ async function buildConfig(args, env = process.env) {
     // Service ports (internal)
     agentServerPort: preferredBackendPort,
     autoBackendPort: preferredAutomationPort,
-    vitePort: preferredVitePort,
+    vitePort,
     vscodePort,
     // Prefix the editor is served under on the ingress origin. Carried on the
     // config so the route table and the agent-server env are built from one
@@ -875,6 +880,21 @@ function getFrontendBackend(config) {
   return config.launchFrontend ? `http://localhost:${config.vitePort}` : null;
 }
 
+/**
+ * Build the default `AUTOMATION_CORS_ORIGINS` value for a stack: the ingress
+ * origin (the main browser entry point) plus the internal frontend origin
+ * (Vite or static-server) on the resolved `config.vitePort`, so direct access
+ * to the frontend port is also permitted by CORS.
+ */
+function buildAutomationCorsOrigins(config) {
+  return [
+    `http://localhost:${config.ingressPort}`,
+    `http://127.0.0.1:${config.ingressPort}`,
+    `http://localhost:${config.vitePort}`,
+    `http://127.0.0.1:${config.vitePort}`,
+  ].join(",");
+}
+
 function buildViteBackendEnv(config, env = process.env) {
   // VITE_BACKEND_HOST tells the Vite dev-server proxy (vite.config.ts) where
   // to forward /api, /sockets, etc.  It is NOT read by the frontend at
@@ -1086,7 +1106,7 @@ function startAutomationBackend(config) {
         // CORS: allow localhost origins for dev, unless explicitly overridden.
         AUTOMATION_CORS_ORIGINS:
           process.env.AUTOMATION_CORS_ORIGINS ||
-          `http://localhost:${config.ingressPort},http://127.0.0.1:${config.ingressPort},http://localhost:3001,http://127.0.0.1:3001`,
+          buildAutomationCorsOrigins(config),
         FILE_STORE: "local",
         LOCAL_STORAGE_PATH: join(config.stateDir, "storage"),
         OPENHANDS_SUPPRESS_BANNER: "1",
@@ -1744,6 +1764,7 @@ function startStaticFrontend(config, staticDir) {
 export {
   buildAgentServerAutomationEnv,
   buildAutomationCommand,
+  buildAutomationCorsOrigins,
   buildAutomationTelemetryEnv,
   buildConfig,
   buildRouteArgs,
