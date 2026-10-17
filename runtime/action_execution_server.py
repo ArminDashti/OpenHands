@@ -77,6 +77,15 @@ HEAD = '<<<<<<< SEARCH'
 DIVIDER = '======='
 TAIL = '>>>>>>> REPLACE'
 
+SESSION_API_KEY = os.environ.get('SESSION_API_KEY')
+api_key_header = APIKeyHeader(name='X-Session-API-Key', auto_error=False)
+
+
+def verify_api_key(api_key: str = Depends(api_key_header)):
+    if SESSION_API_KEY and api_key != SESSION_API_KEY:
+        raise HTTPException(status_code=403, detail='Invalid API Key')
+    return api_key
+
 
 def verify_api_key(api_key: str = Depends(api_key_header)):
     if SESSION_API_KEY and api_key != SESSION_API_KEY:
@@ -506,6 +515,24 @@ if __name__ == '__main__':
         }
         logger.info('Server info endpoint response: %s', response)
         return response
+
+    @app.middleware('http')
+    async def authenticate_requests(request: Request, call_next):
+        if request.url.path != '/alive' and request.url.path != '/server_info':
+            try:
+                verify_api_key(request.headers.get('X-Session-API-Key'))
+            except HTTPException as e:
+                return e
+        response = await call_next(request)
+        return response
+
+    @app.get('/server_info')
+    async def get_server_info():
+        assert client is not None
+        current_time = time.time()
+        uptime = current_time - client.start_time
+        idle_time = current_time - client.last_execution_time
+        return {'uptime': uptime, 'idle_time': idle_time}
 
     @app.post('/execute_action')
     async def execute_action(action_request: ActionRequest):
