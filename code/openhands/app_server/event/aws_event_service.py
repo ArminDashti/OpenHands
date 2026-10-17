@@ -17,6 +17,7 @@ from fastapi import Request
 from openhands.app_server.config import get_app_conversation_info_service
 from openhands.app_server.event.event_service import EventService, EventServiceInjector
 from openhands.app_server.event.event_service_base import EventServiceBase
+from openhands.app_server.file_store.gcs_client import get_gcs_client
 from openhands.app_server.services.injector import InjectorState
 from openhands.sdk import Event
 
