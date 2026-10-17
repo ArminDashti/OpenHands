@@ -52,13 +52,22 @@ from openhands.events.tool import ToolCallMetadata
 from openhands.mcp import MCPClientTool
 
 
-def combine_thought(action: Action, thought: str) -> Action:
+def combine_thought(
+    action: Action, thought: str, reasoning_content: str | None = None
+) -> Action:
     if not hasattr(action, 'thought'):
         return action
-    if thought and action.thought:
-        action.thought = f'{thought}\n{action.thought}'
-    elif thought:
-        action.thought = thought
+    current = getattr(action, 'thought', None)
+    # Always normalize to Thought for downstream code
+    if not isinstance(current, Thought):
+        current = Thought(text=str(current) if current else '')
+        setattr(action, 'thought', current)
+    if isinstance(current, Thought):
+        cur_text = current.text or ''
+        if thought:
+            current.text = f'{thought}\n{cur_text}' if cur_text else thought
+        if reasoning_content is not None:
+            current.reasoning_content = reasoning_content
     return action
 
 
@@ -70,12 +79,26 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
     if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
         # Check if there's assistant_msg.content. If so, add it to the thought
         thought = ''
+        reasoning_content: str | None = None
         if isinstance(assistant_msg.content, str):
             thought = assistant_msg.content
         elif isinstance(assistant_msg.content, list):
             for msg in assistant_msg.content:
                 if msg['type'] == 'text':
                     thought += msg['text']
+                # Capture optional reasoning content if provided by the model
+                if msg.get('type') in {'reasoning', 'thinking'} and 'text' in msg:
+                    reasoning_content = (
+                        reasoning_content + '\n' if reasoning_content else ''
+                    ) + msg['text']
+
+        # Also try direct attributes from LiteLLM message wrapper
+        for attr in ('reasoning_content', 'reasoning', 'thinking'):
+            rc = getattr(assistant_msg, attr, None)
+            if isinstance(rc, str) and rc.strip():
+                reasoning_content = (
+                    rc if reasoning_content is None else reasoning_content + '\n' + rc
+                )
 
         # Process each tool call to OpenHands action
         for i, tool_call in enumerate(assistant_msg.tool_calls):
@@ -293,7 +316,9 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
             # AgentThinkAction
             # ================================================
             elif tool_call.function.name == ThinkTool['function']['name']:
-                action = AgentThinkAction(thought=arguments.get('thought', ''))
+                action = AgentThinkAction(
+                    thought=Thought(text=arguments.get('thought', ''))
+                )
 
             # ================================================
             # BrowserTool
@@ -397,7 +422,7 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
 
             # We only add thought to the first action
             if i == 0:
-                action = combine_thought(action, thought)
+                action = combine_thought(action, thought, reasoning_content)
             # Add metadata for tool calling
             action.tool_call_metadata = ToolCallMetadata(
                 tool_call_id=tool_call.id,

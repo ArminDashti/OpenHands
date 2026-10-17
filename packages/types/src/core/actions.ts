@@ -15,7 +15,7 @@ export interface CommandAction extends OpenHandsActionEvent<"run"> {
     command: string;
     safety_risk: ActionSafetyRisk;
     confirmation_state: "confirmed" | "rejected" | "awaiting_confirmation";
-    thought: string;
+    thought: Thought;
     hidden?: boolean;
   };
 }
@@ -24,7 +24,7 @@ export interface AssistantMessageAction
   extends OpenHandsActionEvent<"message"> {
   source: "agent";
   args: {
-    thought: string;
+    thought: Thought;
     image_urls: string[] | null;
     wait_for_response: boolean;
   };
@@ -37,14 +37,14 @@ export interface IPythonAction extends OpenHandsActionEvent<"run_ipython"> {
     safety_risk: ActionSafetyRisk;
     confirmation_state: "confirmed" | "rejected" | "awaiting_confirmation";
     kernel_init_code: string;
-    thought: string;
+    thought: Thought;
   };
 }
 
 export interface ThinkAction extends OpenHandsActionEvent<"think"> {
   source: "agent";
   args: {
-    thought: string;
+    thought: Thought;
   };
 }
 
@@ -54,7 +54,7 @@ export interface FinishAction extends OpenHandsActionEvent<"finish"> {
     final_thought: string;
     task_completed: "success" | "failure" | "partial";
     outputs: Record<string, unknown>;
-    thought: string;
+    thought: Thought;
   };
 }
 
@@ -64,7 +64,7 @@ export interface DelegateAction extends OpenHandsActionEvent<"delegate"> {
   args: {
     agent: "BrowsingAgent";
     inputs: Record<string, string>;
-    thought: string;
+    thought: Thought;
   };
 }
 
@@ -72,7 +72,7 @@ export interface BrowseAction extends OpenHandsActionEvent<"browse"> {
   source: "agent";
   args: {
     url: string;
-    thought: string;
+    thought: Thought;
   };
 }
 
@@ -82,7 +82,7 @@ export interface BrowseInteractiveAction
   timeout: number;
   args: {
     browser_actions: string;
-    thought: string | null;
+    thought: Thought | null;
     browsergym_send_msg_to_user: string;
   };
 }
@@ -103,7 +103,7 @@ export interface FileWriteAction extends OpenHandsActionEvent<"write"> {
   args: {
     path: string;
     content: string;
-    thought: string;
+    thought: Thought;
   };
 }
 
@@ -129,7 +129,7 @@ export interface FileEditAction extends OpenHandsActionEvent<"edit"> {
 export interface RejectAction extends OpenHandsActionEvent<"reject"> {
   source: "agent";
   args: {
-    thought: string;
+    thought: Thought;
   };
 }
 
