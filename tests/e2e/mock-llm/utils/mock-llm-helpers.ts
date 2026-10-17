@@ -914,10 +914,7 @@ export async function getMockLLMRequests(
 }
 
 /**
- * Set contentEditable chat input text and dispatch an input event.
- *
- * contentEditable divs don't respond reliably to Playwright's .fill() or
- * .type(), so we set the text programmatically via page.evaluate().
+ * Set contentEditable chat input text using real browser editing events.
  */
 export async function setChatInput(
   page: Page,
@@ -947,6 +944,9 @@ export async function setChatInput(
     },
     { tid: testId, inputText: text },
   );
+  await page.keyboard.press("Backspace");
+  await page.keyboard.insertText(text);
+  await expect(input).toContainText(text);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
