@@ -1,7 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
 import posthog from "posthog-js";
-import { useDispatch, useSelector } from "react-redux";
 import OpenHands from "#/api/open-hands";
 import { setInitialQuery } from "#/state/initial-query-slice";
 import { RootState } from "#/store";
@@ -39,7 +37,6 @@ export const useCreateConversation = () => {
       await queryClient.invalidateQueries({
         queryKey: ["user", "conversations"],
       });
-      navigate(`/conversations/${conversationId}`);
     },
   });
 };

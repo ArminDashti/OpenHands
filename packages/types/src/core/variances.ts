@@ -36,7 +36,7 @@ interface LocalUserMessageAction {
 
 export interface StatusUpdate {
   status_update: true;
-  type: "error";
+  type: "error" | "info";
   id: string;
   message: string;
 }
