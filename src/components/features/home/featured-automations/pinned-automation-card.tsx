@@ -297,7 +297,18 @@ export function PinnedAutomationCard({
               {shortSummary ? (
                 showSummaryHovercard && summary ? (
                   <Tooltip
-                    content={
+                    closeDelay={100}
+                    shouldSkipAnimation={disableAnimation}
+                  >
+                    <Tooltip.Trigger>
+                      <span className="min-w-0 flex-1 cursor-default truncate text-[var(--oh-status-error)]">
+                        {shortErrorDetail}
+                      </span>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content
+                      placement="top"
+                      className="rounded-xl border border-[var(--oh-border)] bg-base-secondary p-0 text-white shadow-xl"
+                    >
                       <p className="max-w-xs whitespace-pre-wrap break-words p-2 text-xs">
                         {summary}
                       </p>

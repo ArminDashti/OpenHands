@@ -896,7 +896,6 @@ export function ConversationPanel({
       return (
         <Tooltip
           key={conversation.id}
-          placement="right-start"
           delay={1000}
           closeDelay={100}
           isDisabled={

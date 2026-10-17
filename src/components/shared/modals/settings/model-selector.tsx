@@ -159,14 +159,10 @@ export function ModelSelector({
         <label className={cn("text-sm", labelClassName)}>
           {t(I18nKey.LLM$PROVIDER)}
         </label>
-        <Autocomplete
-          data-testid="llm-provider-input"
+        <ComboBox
           isRequired
-          isVirtualized={false}
-          name="llm-provider-input"
           isDisabled={isDisabled}
           aria-label={t(I18nKey.LLM$PROVIDER)}
-          isClearable={false}
           onSelectionChange={(e) => {
             if (e?.toString()) handleChangeProvider(e.toString());
           }}
@@ -230,14 +226,9 @@ export function ModelSelector({
           {t(I18nKey.LLM$MODEL)}
         </label>
         <div className="relative">
-          <Autocomplete
-            data-testid="llm-model-input"
+          <ComboBox
             isRequired
-            isVirtualized={false}
-            isLoading={isLoadingModels}
-            name="llm-model-input"
             aria-label={t(I18nKey.LLM$MODEL)}
-            isClearable={false}
             onSelectionChange={(e) => {
               if (e?.toString()) handleChangeModel(e.toString());
             }}

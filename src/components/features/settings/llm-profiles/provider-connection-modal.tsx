@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Autocomplete,
-  AutocompleteItem,
-  AutocompleteSection,
-} from "@heroui/react";
+import { ComboBox, Header, Input, ListBox } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsInput } from "#/components/features/settings/settings-input";

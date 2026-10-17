@@ -113,12 +113,8 @@ export function CompactConversationRow({
           )
         }
       >
-        <ConversationStatusDot
-          executionStatus={executionStatus}
-          sandboxStatus={sandboxStatus}
-          showTooltip={false}
-        />
-      </NavigationLink>
+        {preview}
+      </Tooltip.Content>
     </Tooltip>
   );
 }
