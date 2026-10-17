@@ -52,14 +52,6 @@ from openhands.app_server.utils.sql_utils import Base, UtcDateTime
 _logger = logging.getLogger(__name__)
 WEBHOOK_CALLBACK_VARIABLE = 'OH_WEBHOOKS_0_BASE_URL'
 polling_task: asyncio.Task | None = None
-POD_STATUS_MAPPING = {
-    'ready': SandboxStatus.RUNNING,
-    'pending': SandboxStatus.STARTING,
-    'running': SandboxStatus.STARTING,
-    'failed': SandboxStatus.ERROR,
-    'unknown': SandboxStatus.ERROR,
-    'crashloopbackoff': SandboxStatus.ERROR,
-}
 STATUS_MAPPING = {
     'running': SandboxStatus.RUNNING,
     'paused': SandboxStatus.PAUSED,
