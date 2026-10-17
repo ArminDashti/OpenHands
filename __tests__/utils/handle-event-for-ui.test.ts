@@ -296,156 +296,211 @@ describe("handleEventForUI", () => {
     });
   });
 
-  describe("StreamingDeltaEvent", () => {
-    it("merges consecutive deltas into a single provisional assistant event", () => {
-      const first = makeStreamingDelta("delta-1", "I'll start ");
-      const second = makeStreamingDelta("delta-2", "working on that.");
+  describe("streaming slots", () => {
+    const started = (
+      itemId: string,
+      extra: Partial<ItemStartedFrame> = {},
+    ): ItemStartedFrame => ({
+      type: "item_started",
+      item_id: itemId,
+      attempt: 1,
+      ...extra,
+    });
 
-      const afterFirst = handleEventForUI(first, [mockMessageEvent]);
-      const afterSecond = handleEventForUI(second, afterFirst);
+    const delta = (
+      itemId: string,
+      content: string,
+      extra: Partial<DeltaFrame> = {},
+    ): DeltaFrame => ({
+      type: "delta",
+      item_id: itemId,
+      attempt: 1,
+      order: 0,
+      kind: "text",
+      content,
+      ...extra,
+    });
 
-      expect(afterSecond).toEqual([
+    const slotsOf = (events: OpenHandsEvent[]) =>
+      events.filter((event): event is StreamingDeltaEvent =>
+        isStreamingDeltaEvent(event),
+      );
+
+    it("opens a slot keyed by item_id and accumulates its deltas", () => {
+      const opened = openStreamingSlot(started("item-1"), [mockMessageEvent]);
+      const result = appendStreamingDeltas(
+        [delta("item-1", "I'll start "), delta("item-1", "working on that.")],
+        opened,
+      );
+
+      expect(slotsOf(result)).toHaveLength(1);
+      expect(slotsOf(result)[0]).toMatchObject({
+        id: "item-1",
+        content: "I'll start working on that.",
+        reasoning_content: null,
+      });
+    });
+
+    it("routes reasoning deltas to reasoning_content, independently of text", () => {
+      const opened = openStreamingSlot(started("item-1"), []);
+      const result = appendStreamingDeltas(
+        [
+          delta("item-1", "thinking", { kind: "reasoning" }),
+          delta("item-1", "answer"),
+          delta("item-1", " more", { kind: "reasoning" }),
+        ],
+        opened,
+      );
+
+      expect(slotsOf(result)[0]).toMatchObject({
+        content: "answer",
+        reasoning_content: "thinking more",
+      });
+    });
+
+    it("retires the slot when the durable event carries its id", () => {
+      const opened = openStreamingSlot(started("test-agent-message-1"), [
         mockMessageEvent,
+      ]);
+      const streamed = appendStreamingDeltas(
+        [delta("test-agent-message-1", "partial text")],
+        opened,
+      );
+
+      const result = handleEventForUI(mockAgentMessageEvent, streamed);
+
+      // One equality test on the id — the streamed text is never compared.
+      expect(result).toEqual([mockMessageEvent, mockAgentMessageEvent]);
+    });
+
+    it("retires the slot in place, keeping events that arrived beside it", () => {
+      const opened = openStreamingSlot(
+        started("test-agent-message-1", { anchor_seq: 0 }),
+        [{ ...mockMessageEvent, seq: 0 }],
+      );
+      const streamed = appendStreamingDeltas(
+        [delta("test-agent-message-1", "partial")],
+        opened,
+      );
+      // A user message lands mid-stream, sequenced after the slot's anchor.
+      const interrupted = handleEventForUI(
+        { ...mockMessageEvent, id: "mid-stream", seq: 1 },
+        streamed,
+      );
+
+      const result = handleEventForUI(mockAgentMessageEvent, interrupted);
+
+      expect(result.map((event) => event.id)).toEqual([
+        mockMessageEvent.id,
+        mockAgentMessageEvent.id,
+        "mid-stream",
+      ]);
+    });
+
+    it("keeps a mid-stream event below the slot rather than splitting it (#15433)", () => {
+      const opened = openStreamingSlot(started("item-1", { anchor_seq: 0 }), [
+        { ...mockMessageEvent, seq: 0 },
+      ]);
+      const firstHalf = appendStreamingDeltas(
+        [delta("item-1", "first half")],
+        opened,
+      );
+      const interrupted = handleEventForUI(
+        { ...mockMessageEvent, id: "mid-stream", seq: 1 },
+        firstHalf,
+      );
+      const result = appendStreamingDeltas(
+        [delta("item-1", " second half")],
+        interrupted,
+      );
+
+      // One slot, still whole, still above the interrupting message.
+      expect(slotsOf(result)).toHaveLength(1);
+      expect(slotsOf(result)[0].content).toBe("first half second half");
+      expect(result.map((event) => event.id)).toEqual([
+        mockMessageEvent.id,
+        "item-1",
+        "mid-stream",
+      ]);
+    });
+
+    it("supersedes the slot's text when a higher attempt streams it again", () => {
+      const opened = openStreamingSlot(started("item-1"), []);
+      const first = appendStreamingDeltas([delta("item-1", "retried")], opened);
+
+      const reopened = openStreamingSlot(
+        started("item-1", { attempt: 2 }),
+        first,
+      );
+      expect(slotsOf(reopened)[0].content).toBeNull();
+
+      const result = appendStreamingDeltas(
+        [delta("item-1", "fresh text", { attempt: 2 })],
+        reopened,
+      );
+      expect(slotsOf(result)).toHaveLength(1);
+      expect(slotsOf(result)[0].content).toBe("fresh text");
+    });
+
+    it("keeps streamed text when the current attempt's start is repeated", () => {
+      const opened = openStreamingSlot(started("item-1"), []);
+      const streamed = appendStreamingDeltas([delta("item-1", "kept")], opened);
+
+      const result = openStreamingSlot(started("item-1"), streamed);
+
+      expect(result).toBe(streamed);
+      expect(slotsOf(result)[0].content).toBe("kept");
+    });
+
+    it("places the slot by anchor_seq when a message lands before the first token", () => {
+      // The SDK reads the anchor when the step opens, before the LLM call; a
+      // user message persisted while waiting for the first token has a higher
+      // seq and has already rendered by the time item_started arrives.
+      const history = [
+        { ...mockMessageEvent, seq: 0 },
+        { ...mockMessageEvent, id: "sent-while-waiting", seq: 1 },
+      ];
+
+      const result = openStreamingSlot(
+        started("item-1", { anchor_seq: 0 }),
+        history,
+      );
+
+      expect(result.map((event) => event.id)).toEqual([
+        mockMessageEvent.id,
+        "item-1",
+        "sent-while-waiting",
+      ]);
+      // Borrowing the anchor's timestamp keeps it there through a re-sort.
+      expect(slotsOf(result)[0].timestamp).toBe(mockMessageEvent.timestamp);
+    });
+
+    it("borrows the anchor event's timestamp, not its neighbour's", () => {
+      const history = [
         {
-          ...first,
-          content: "I'll start working on that.",
-          reasoning_content: null,
+          ...mockMessageEvent,
+          timestamp: "2026-09-16T10:00:00.000001",
+          seq: 4,
         },
-      ]);
-    });
-
-    it("keeps the canonical finish event after streamed content", () => {
-      const first = makeStreamingDelta("delta-1", "I'll start ");
-      const second = makeStreamingDelta("delta-2", "working on that.");
-      const streamedDelta = handleEventForUI(
-        second,
-        handleEventForUI(first, []),
-      ).at(-1)!;
-      const uiEvents = [mockMessageEvent, streamedDelta];
-
-      const result = handleEventForUI(mockFinishActionEvent, uiEvents);
-
-      expect(result).toEqual([mockMessageEvent, mockFinishActionEvent]);
-      expect(result.at(-1)).toBe(mockFinishActionEvent);
-    });
-
-    it("keeps the canonical agent message after streamed content", () => {
-      const first = makeStreamingDelta("delta-1", "I'll start ");
-      const second = makeStreamingDelta("delta-2", "working on that.");
-      const streamedDelta = handleEventForUI(
-        second,
-        handleEventForUI(first, []),
-      ).at(-1)!;
-      const uiEvents = [mockMessageEvent, streamedDelta];
-
-      const result = handleEventForUI(mockAgentMessageEvent, uiEvents);
-
-      expect(result).toEqual([mockMessageEvent, mockAgentMessageEvent]);
-      expect(result.at(-1)).toBe(mockAgentMessageEvent);
-    });
-
-    it("replaces aggregated streamed content with the canonical final message", () => {
-      const first = makeStreamingDelta(
-        "delta-1",
-        "I'll start working on that.",
-      );
-      const second = makeStreamingDelta("delta-2", "I found the issue.");
-      const aggregateAgentMessage: MessageEvent = {
-        ...mockAgentMessageEvent,
-        llm_message: {
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: "I'll start working on that.I found the issue.",
-            },
-          ],
+        // e.g. a transient or client-stamped event with a different clock
+        {
+          ...mockMessageEvent,
+          id: "no-seq",
+          timestamp: "2026-09-16T23:59:59Z",
         },
-      };
+      ];
 
-      const afterFirst = handleEventForUI(first, [mockMessageEvent]);
-      const afterObservation = handleEventForUI(
-        mockObservationEvent,
-        afterFirst,
+      const result = openStreamingSlot(
+        started("item-1", { anchor_seq: 4 }),
+        history,
       );
-      const afterSecond = handleEventForUI(second, afterObservation);
-      const result = handleEventForUI(aggregateAgentMessage, afterSecond);
 
-      expect(result).toEqual([
-        mockMessageEvent,
-        mockObservationEvent,
-        aggregateAgentMessage,
-      ]);
+      expect(slotsOf(result)[0].timestamp).toBe("2026-09-16T10:00:00.000001");
     });
 
-    it("uses canonical final content while retaining reasoning-only deltas", () => {
-      const contentDelta = makeStreamingDelta(
-        "delta-content",
-        "I'll start working on that.",
-      );
-      const reasoningDelta: StreamingDeltaEvent = {
-        id: "delta-reasoning",
-        kind: "StreamingDeltaEvent",
-        timestamp: Date.now().toString(),
-        source: "agent",
-        content: null,
-        reasoning_content: "thinking...",
-      };
-      const finalMessage: MessageEvent = {
-        ...mockAgentMessageEvent,
-        llm_message: {
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: "I'll start working on that. Done.",
-            },
-          ],
-        },
-      };
-
-      const result = handleEventForUI(finalMessage, [
-        mockMessageEvent,
-        contentDelta,
-        mockObservationEvent,
-        reasoningDelta,
-      ]);
-
-      expect(result).toEqual([
-        mockMessageEvent,
-        mockObservationEvent,
-        reasoningDelta,
-        finalMessage,
-      ]);
-    });
-
-    it("keeps the canonical final message after leading streamed whitespace", () => {
-      const streamedDelta = makeStreamingDelta(
-        "delta-1",
-        "\nI'll start working on that. Done.",
-      );
-
-      const result = handleEventForUI(mockAgentMessageEvent, [
-        mockMessageEvent,
-        streamedDelta,
-      ]);
-
-      expect(result).toEqual([mockMessageEvent, mockAgentMessageEvent]);
-      expect(result.at(-1)).toBe(mockAgentMessageEvent);
-    });
-
-    it("replaces unmatched streamed text with the canonical final message", () => {
-      const streamedDelta = makeStreamingDelta(
-        "delta-1",
-        "I'll start working on that.",
-      );
-      const finalMessage: MessageEvent = {
-        ...mockAgentMessageEvent,
-        llm_message: {
-          role: "assistant",
-          content: [{ type: "text", text: "Done." }],
-        },
-      };
+    it("supersedes on a higher-attempt delta even without its item_started", () => {
+      const opened = openStreamingSlot(started("item-1"), []);
+      const first = appendStreamingDeltas([delta("item-1", "stale")], opened);
 
       const result = handleEventForUI(finalMessage, [
         mockMessageEvent,
@@ -788,31 +843,15 @@ describe("handleEventForUI", () => {
       const planningDelta = {
         ...makeStreamingDelta("delta-planning", "planning agent says"),
         isFromPlanningAgent: true,
-      };
+      });
 
-      const result = handleEventForUI(planningDelta, [
-        mockMessageEvent,
-        mainDelta,
+      expect(clearStreamingSlots(both).map((event) => event.id)).toEqual([
+        mockMessageEvent.id,
+        "plan-item",
       ]);
-
-      expect(result).toEqual([mockMessageEvent, mainDelta, planningDelta]);
-    });
-
-    it("still merges consecutive deltas from the same sender", () => {
-      const first = {
-        ...makeStreamingDelta("delta-1", "planning "),
-        isFromPlanningAgent: true,
-      };
-      const second = {
-        ...makeStreamingDelta("delta-2", "continues"),
-        isFromPlanningAgent: true,
-      };
-
-      const result = handleEventForUI(second, [mockMessageEvent, first]);
-
-      expect(result).toEqual([
-        mockMessageEvent,
-        { ...first, content: "planning continues", reasoning_content: null },
+      expect(clearStreamingSlots(both, true).map((event) => event.id)).toEqual([
+        mockMessageEvent.id,
+        "main-item",
       ]);
     });
 
