@@ -7,7 +7,6 @@ import { InteractiveChatBox } from "./interactive-chat-box";
 import { RootState } from "#/store";
 import AgentState from "#/types/agent-state";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
-import { FeedbackModal } from "../feedback/feedback-modal";
 import { useScrollToBottom } from "#/hooks/use-scroll-to-bottom";
 import { TypingIndicator } from "./typing-indicator";
 import { useWsClient } from "#/context/ws-client-provider";
@@ -45,10 +44,6 @@ export function ChatInterface() {
     }
   }, [messages.length, curAgentState, scrollDomToBottom]);
 
-  const [feedbackPolarity, setFeedbackPolarity] = React.useState<
-    "positive" | "negative"
-  >("positive");
-  const [feedbackModalIsOpen, setFeedbackModalIsOpen] = React.useState(false);
   const [messageToSend, setMessageToSend] = React.useState<string | null>(null);
   const { selectedRepository, importedProjectZip } = useSelector(
     (state: RootState) => state.initalQuery,
@@ -170,12 +165,6 @@ export function ChatInterface() {
           onChange={setMessageToSend}
         />
       </div>
-
-      <FeedbackModal
-        isOpen={feedbackModalIsOpen}
-        onClose={() => setFeedbackModalIsOpen(false)}
-        polarity={feedbackPolarity}
-      />
     </div>
   );
 }
