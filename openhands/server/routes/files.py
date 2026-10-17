@@ -48,7 +48,7 @@ async def list_files(request: Request, path: str | None = None):
     ```
 
     Args:
-        request (Request): The incoming request object.
+        metadata: The conversation metadata (provides conversation_id and user access validation).
         path (str, optional): The path to list files from. Defaults to None.
 
     Returns:
@@ -60,7 +60,7 @@ async def list_files(request: Request, path: str | None = None):
     if not request.state.conversation.runtime:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={'error': 'Runtime not yet initialized'},
+            content={'error': str(e)},
         )
 
     runtime: Runtime = request.state.conversation.runtime
@@ -97,8 +97,10 @@ async def list_files(request: Request, path: str | None = None):
         logger.error(f'Error filtering files: {e}', exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={'error': f'Error filtering files: {e}'},
+            content={'error': f'Error listing files: {e}'},
         )
+
+    file_list = [f for f in file_list if f not in FILES_TO_IGNORE]
 
     return file_list
 
@@ -113,9 +115,8 @@ async def select_file(file: str, request: Request):
     ```
 
     Args:
-        file (str): The path of the file to be retrieved.
-            Expect path to be absolute inside the runtime.
-        request (Request): The incoming request object.
+        file (str): The path of the file to be retrieved (relative to workspace root).
+        metadata: The conversation metadata (provides conversation_id and user access validation).
 
     Returns:
         dict: A dictionary containing the file content.
@@ -143,7 +144,15 @@ async def select_file(file: str, request: Request):
         logger.error(f'Error opening file {file}: {observation}', exc_info=False)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={'error': f'Error opening file: {observation}'},
+            content={'error': f'Error opening file: {e}'},
+        )
+
+    if content is not None:
+        return JSONResponse(content={'code': content})
+    elif error and error.startswith('BINARY_FILE:'):
+        return JSONResponse(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            content={'error': f'Unable to open binary file: {file}'},
         )
 
 

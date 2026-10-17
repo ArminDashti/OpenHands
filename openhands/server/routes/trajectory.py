@@ -13,9 +13,11 @@ async def get_trajectory(request: Request):
     """Get trajectory.
 
     This function retrieves the current trajectory and returns it.
+    Uses the local EventStore which reads events from the file store,
+    so it works with both standalone and nested conversation managers.
 
     Args:
-        request (Request): The incoming request object.
+        metadata: The conversation metadata (provides conversation_id and user access validation).
 
     Returns:
         JSONResponse: A JSON response containing the trajectory as a list of
