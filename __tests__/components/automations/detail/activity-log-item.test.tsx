@@ -18,6 +18,8 @@ import { I18nKey } from "#/i18n/declaration";
 // aria-label resolves to the raw key string. Match it explicitly.
 const LOGS_BUTTON_NAME = (name: string) =>
   name.includes(I18nKey.AUTOMATIONS$DETAIL$LOGS_VIEW);
+const INSPECT_BUTTON_NAME = (name: string) =>
+  name.includes(I18nKey.AUTOMATIONS$DETAIL$RUN_INSPECT_VIEW);
 
 // The modal is wired to react-query + the conversation lookup. The
 // ActivityLogItem tests focus on the trigger button; we mock the modal so
@@ -102,10 +104,13 @@ describe("ActivityLogItem — logs button", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not render a logs button when bash_command_id is null", () => {
+  it("does not render an inspect button when the run has neither logs nor details", () => {
     renderItem(makeRun({ bash_command_id: null }));
     expect(
       screen.queryByRole("button", { name: LOGS_BUTTON_NAME }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: INSPECT_BUTTON_NAME }),
     ).not.toBeInTheDocument();
   });
 
@@ -119,6 +124,30 @@ describe("ActivityLogItem — logs button", () => {
     const modal = screen.getByTestId("logs-modal");
     expect(modal).toBeInTheDocument();
     expect(modal.getAttribute("data-bash-command-id")).toBe("cmd-xyz");
+  });
+
+  it("opens the inspection modal for a run with status details but no bash command", () => {
+    renderItem(
+      makeRun({
+        status: AutomationRunStatus.RUNNING,
+        conversation_id: null,
+        bash_command_id: null,
+        status_detail: {
+          phase: "verification",
+          kind: "api_rate_limited",
+          detail: "Sandbox API returned HTTP 429",
+          transient: true,
+        },
+      }),
+    );
+
+    expect(screen.queryByTestId("logs-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: INSPECT_BUTTON_NAME }));
+
+    const modal = screen.getByTestId("logs-modal");
+    expect(modal).toBeInTheDocument();
+    expect(modal.getAttribute("data-bash-command-id")).toBeNull();
   });
 
   it("renders the logs button inside the row link without breaking its href", () => {

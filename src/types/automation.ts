@@ -181,6 +181,12 @@ export interface AutomationRun {
   status_detail?: AutomationRunStatusDetail | null;
   run_metadata?: AutomationRunMetadata | null;
   /**
+   * Structured current/last run lifecycle details from newer automation
+   * backends. This can describe transient infrastructure issues while a run is
+   * still RUNNING, or terminal context alongside error_detail.
+   */
+  status_detail?: AutomationRunStatusDetail | null;
+  /**
    * Accumulated LLM cost of the run in USD, reported by the SDK in the
    * completion callback. `null` means unknown — the run predates cost
    * tracking, or ended without a callback (cancelled, watchdog timeout).

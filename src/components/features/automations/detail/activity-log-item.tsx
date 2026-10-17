@@ -54,6 +54,8 @@ export function ActivityLogItem({ run, automation }: ActivityLogItemProps) {
   const { t, i18n } = useTranslation("openhands");
   const hasConversation = !!run.conversation_id;
   const hasBashCommand = !!run.bash_command_id;
+  const hasRunDetails = !!run.error_detail || !!run.status_detail;
+  const canInspectRun = hasBashCommand || hasRunDetails;
   // Only surface "Conversation not created" when the run has reached a
   // terminal status without a conversation — i.e. the conversation truly
   // will not be created (e.g. sandbox provisioning failed). While
@@ -95,15 +97,22 @@ export function ActivityLogItem({ run, automation }: ActivityLogItemProps) {
     setLogsOpen(true);
   };
 
-  const logsButton = hasBashCommand ? (
+  const inspectButton = canInspectRun ? (
     <button
       type="button"
       onClick={handleLogsClick}
       className="rounded-md p-1 text-muted hover:bg-surface-raised hover:text-foreground focus:bg-surface-raised focus:outline-none"
-      aria-label={t(I18nKey.AUTOMATIONS$DETAIL$LOGS_VIEW, {
-        timestamp: formattedTimestamp,
-      })}
-      title={t(I18nKey.AUTOMATIONS$DETAIL$LOGS_VIEW_SHORT)}
+      aria-label={t(
+        hasBashCommand
+          ? I18nKey.AUTOMATIONS$DETAIL$LOGS_VIEW
+          : I18nKey.AUTOMATIONS$DETAIL$RUN_INSPECT_VIEW,
+        { timestamp: formattedTimestamp },
+      )}
+      title={t(
+        hasBashCommand
+          ? I18nKey.AUTOMATIONS$DETAIL$LOGS_VIEW_SHORT
+          : I18nKey.AUTOMATIONS$DETAIL$RUN_INSPECT_VIEW_SHORT,
+      )}
     >
       <TerminalIcon className="size-4" />
     </button>
@@ -173,7 +182,7 @@ export function ActivityLogItem({ run, automation }: ActivityLogItemProps) {
         </div>
       )}
 
-      {hasBashCommand && (
+      {canInspectRun && (
         <RunLogsModal
           conversationId={run.conversation_id}
           sandboxId={run.sandbox_id ?? null}

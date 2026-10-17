@@ -243,8 +243,35 @@ export function RunLogsModal({
   if (!isOpen) return null;
 
   const loading = isResolvingConversation || (isFetching && !outputs);
-  const noBashCommand = !bashCommandId;
+  const hasBashCommand = !!bashCommandId;
+  const noBashCommand = !hasBashCommand;
   const activeBody = activeTab === "stdout" ? stdout : stderr;
+  const statusDetail = run?.status_detail ?? null;
+  const rawStatusDetail =
+    typeof statusDetail?.detail === "string" ? statusDetail.detail : null;
+  const parsedStatusDetail = parseDetailText(rawStatusDetail);
+  const statusDetailSummary = getStatusDetailSummary(
+    statusDetail,
+    parsedStatusDetail,
+  );
+  const statusDetailSections = hasBashCommand
+    ? []
+    : getDetailSections(parsedStatusDetail, statusDetailSummary);
+  const statusDetailRows = getStatusDetailRows(statusDetail);
+  const statusDetailExtraRows = getStatusDetailExtraRows(statusDetail);
+  const errorDetail = run?.error_detail ?? null;
+  const errorDetailDuplicatesStatusDetail =
+    !!errorDetail &&
+    !!rawStatusDetail &&
+    errorDetail.trim() === rawStatusDetail.trim();
+  const errorDetailSections = getDetailSections(
+    parseDetailText(errorDetail),
+    null,
+  );
+  const hasRunDetails = !!errorDetail || !!statusDetail;
+  const titleKey = hasBashCommand
+    ? I18nKey.AUTOMATIONS$DETAIL$LOGS_TITLE
+    : I18nKey.AUTOMATIONS$DETAIL$RUN_DETAILS_TITLE;
 
   const tabBaseClass =
     "border-b-2 px-3 py-2 text-sm font-normal transition-colors focus:outline-none";
@@ -256,7 +283,7 @@ export function RunLogsModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={t(I18nKey.AUTOMATIONS$DETAIL$LOGS_TITLE)}
+      aria-label={t(titleKey)}
     >
       <div
         className="absolute inset-0 bg-black/60"
@@ -277,7 +304,7 @@ export function RunLogsModal({
         </button>
 
         <h2 className={cn("pr-8", modalTitleLgMediumClassName)}>
-          {t(I18nKey.AUTOMATIONS$DETAIL$LOGS_TITLE)}
+          {t(titleKey)}
         </h2>
 
         <RunInspectionSummary run={run} />
