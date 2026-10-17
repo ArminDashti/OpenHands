@@ -67,7 +67,7 @@ export function ChatInterface() {
         current_message_length: content.length,
       });
     }
-    const promises = files.map((file) => convertImageToBase64(file));
+    const promises = images.map((image) => convertImageToBase64(image));
     const imageUrls = await Promise.all(promises);
 
     const timestamp = new Date().toISOString();

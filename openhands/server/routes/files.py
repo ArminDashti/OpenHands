@@ -18,6 +18,7 @@ from openhands.events.action import (
     FileReadAction,
     FileWriteAction,
 )
+from openhands.events.action.files import FileWriteAction
 from openhands.events.observation import (
     ErrorObservation,
     FileReadObservation,
