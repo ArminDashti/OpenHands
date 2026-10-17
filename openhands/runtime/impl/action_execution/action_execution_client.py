@@ -49,7 +49,7 @@ class ActionExecutionClient(Runtime):
         self,
         config: AppConfig,
         event_stream: EventStream,
-        sid: str = 'default',
+        conversation_id: str = 'default',
         plugins: list[PluginRequirement] | None = None,
         env_vars: dict[str, str] | None = None,
         status_callback: Any | None = None,
@@ -63,7 +63,7 @@ class ActionExecutionClient(Runtime):
         super().__init__(
             config,
             event_stream,
-            sid,
+            conversation_id,
             plugins,
             env_vars,
             status_callback,

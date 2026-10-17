@@ -93,7 +93,7 @@ def controller_fixture():
     mock_agent.config = AppConfig().get_agent_config('CodeActAgent')
 
     mock_event_stream = MagicMock(spec=EventStream)
-    mock_event_stream.sid = 'test_sid'
+    mock_event_stream.conversation_id = 'test_sid'
     mock_event_stream.file_store = InMemoryFileStore({})
     # Ensure get_latest_event_id returns an integer
     mock_event_stream.get_latest_event_id.return_value = -1
@@ -102,7 +102,7 @@ def controller_fixture():
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test_sid',
+        conversation_id='test_sid',
     )
     controller.state = State(session_id='test_sid')
 

@@ -56,7 +56,7 @@ async def test_set_agent_state(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -73,7 +73,7 @@ async def test_on_event_message_action(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -89,7 +89,7 @@ async def test_on_event_change_agent_state_action(mock_agent, mock_event_stream)
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -105,7 +105,7 @@ async def test_report_error(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -121,7 +121,7 @@ async def test_step_with_exception(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -140,7 +140,7 @@ async def test_step_max_iterations(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=False,
     )
@@ -158,7 +158,7 @@ async def test_step_max_iterations_headless(mock_agent, mock_event_stream):
         agent=mock_agent,
         event_stream=mock_event_stream,
         max_iterations=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )
@@ -178,7 +178,7 @@ async def test_step_max_budget(mock_agent, mock_event_stream):
         event_stream=mock_event_stream,
         max_iterations=10,
         max_budget_per_task=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=False,
     )
@@ -197,7 +197,7 @@ async def test_step_max_budget_headless(mock_agent, mock_event_stream):
         event_stream=mock_event_stream,
         max_iterations=10,
         max_budget_per_task=10,
-        sid='test',
+        conversation_id='test',
         confirmation_mode=False,
         headless_mode=True,
     )

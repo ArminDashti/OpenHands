@@ -53,7 +53,7 @@ class AgentSession:
     reuse across Web/CLI/Headless modes.
     """
 
-    sid: str
+    conversation_id: str
     user_id: str | None
     event_stream: EventStream
     llm_registry: LLMRegistry
@@ -70,7 +70,7 @@ class AgentSession:
 
     def __init__(
         self,
-        sid: str,
+        conversation_id: str,
         file_store: FileStore,
         llm_registry: LLMRegistry,
         conversation_stats: ConversationStats,
@@ -93,7 +93,7 @@ class AgentSession:
         self._status_callback = status_callback
         self.user_id = user_id
         self.logger = OpenHandsLoggerAdapter(
-            extra={'session_id': sid, 'user_id': user_id}
+            extra={'session_id': conversation_id, 'user_id': user_id}
         )
         self.llm_registry = llm_registry
         self.conversation_stats = conversation_stats
@@ -244,12 +244,12 @@ class AgentSession:
         self._closed = True
         while self._starting and should_continue():
             self.logger.debug(
-                f'Waiting for initialization to finish before closing session {self.sid}'
+                f'Waiting for initialization to finish before closing session {self.conversation_id}'
             )
             await asyncio.sleep(WAIT_TIME_BEFORE_CLOSE_INTERVAL)
             if time.time() <= self._started_at + WAIT_TIME_BEFORE_CLOSE:
                 self.logger.error(
-                    f'Waited too long for initialization to finish before closing session {self.sid}'
+                    f'Waited too long for initialization to finish before closing session {self.conversation_id}'
                 )
                 break
         if self.event_stream is not None:
@@ -490,7 +490,7 @@ class AgentSession:
     ) -> Memory:
         memory = Memory(
             event_stream=self.event_stream,
-            sid=self.sid,
+            conversation_id=self.conversation_id,
             status_callback=self._status_callback,
         )
 
@@ -541,9 +541,11 @@ class AgentSession:
 
         try:
             restored_state = State.restore_from_session(
-                self.sid, self.file_store, self.user_id
+                self.conversation_id, self.file_store, self.user_id
             )
-            self.logger.debug(f'Restored state from session, sid: {self.sid}')
+            self.logger.debug(
+                f'Restored state from session, conversation_id: {self.conversation_id}'
+            )
         except Exception as e:
             if self.event_stream.get_latest_event_id() > 0:
                 self.logger.warning(f'State could not be restored: {e}')

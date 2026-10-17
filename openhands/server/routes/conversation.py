@@ -16,7 +16,9 @@ async def get_remote_runtime_config(request: Request):
     """
     runtime = request.state.conversation.runtime
     runtime_id = runtime.runtime_id if hasattr(runtime, 'runtime_id') else None
-    session_id = runtime.sid if hasattr(runtime, 'sid') else None
+    session_id = (
+        runtime.conversation_id if hasattr(runtime, 'conversation_id') else None
+    )
     return JSONResponse(
         content={
             'runtime_id': runtime_id,
