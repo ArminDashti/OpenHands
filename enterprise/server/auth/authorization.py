@@ -39,6 +39,9 @@ from openhands.core.logger import openhands_logger as logger
 from openhands.server.auth import Permission
 from openhands.server.user_auth import get_user_id
 
+    # Organization Conversations (Admin/Owner only)
+    VIEW_ORG_CONVERSATIONS = 'view_org_conversations'
+
 
 class RoleName(str, Enum):
     """Role names used in the system."""
