@@ -6,7 +6,6 @@ interface AgentStateData {
   curAgentState: AgentState;
 }
 
-// Initial agent state
 const initialAgentState: AgentStateData = {
   curAgentState: AgentState.LOADING,
 };
@@ -23,7 +22,7 @@ export function useAgentState() {
     queryKey: agentQueryKey,
     queryFn: () => initialAgentState,
     initialData: initialAgentState,
-    staleTime: Infinity, // We manage updates manually through mutations
+    staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -59,6 +58,6 @@ export function useAgentState() {
   return {
     curAgentState: query.data?.curAgentState || initialAgentState.curAgentState,
     isLoading: query.isLoading,
-    setCurrentAgentState: setAgentStateMutation.mutate,
+    setCurrentAgentState,
   };
 }

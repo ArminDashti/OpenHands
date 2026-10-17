@@ -21,22 +21,20 @@ export function useFileState() {
   const query = useQuery({
     queryKey: QueryKeys.fileState,
     queryFn: () => {
-      // First check if we already have data in the query cache
       const existingData = queryClient.getQueryData<FileStateState>([
         "fileState",
       ]);
       if (existingData) return existingData;
       return getInitialFileStateState();
     },
-    initialData: initialFileState, // Use initialFileState directly to ensure it's always defined
-    staleTime: Infinity, // We manage updates manually through mutations
+    initialData: initialFileState,
+    staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
   // Function to set changed state for a file path (synchronous)
   const setChanged = (path: string, changed: boolean) => {
-    // Get current state
     const previousState =
       queryClient.getQueryData<FileStateState>(QueryKeys.fileState) ||
       initialFileState;
@@ -59,7 +57,6 @@ export function useFileState() {
     queryClient.setQueryData<FileStateState>(QueryKeys.fileState, newState);
   };
   return {
-    // State
     changed: query.data?.changed || initialFileState.changed,
     isLoading: query.isLoading,
     // Actions

@@ -59,6 +59,6 @@ export function useMetrics() {
   return {
     metrics: query.data || initialMetrics,
     isLoading: query.isLoading,
-    setMetrics: setMetricsMutation.mutate,
+    setMetrics: setMetricsState,
   };
 }

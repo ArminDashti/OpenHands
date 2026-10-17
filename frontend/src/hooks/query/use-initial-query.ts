@@ -1,15 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QueryKeys } from "./query-keys";
 interface InitialQueryState {
-  files: string[]; // base64 encoded images
+  files: string[];
   initialPrompt: string | null;
   selectedRepository: string | null;
+  replayJson: string | null;
 }
 // Initial state
 const initialState: InitialQueryState = {
   files: [],
   initialPrompt: null,
   selectedRepository: null,
+  replayJson: null,
 };
 /**
  * Hook to access and manipulate initial query data using React Query
@@ -221,7 +223,6 @@ export function useInitialQuery() {
   });
   // No need to log the state anymore
   return {
-    // State
     files: query.data?.files || initialState.files,
     initialPrompt: query.data?.initialPrompt || initialState.initialPrompt,
     selectedRepository:

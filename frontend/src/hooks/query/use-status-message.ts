@@ -63,6 +63,6 @@ export function useStatusMessage() {
   return {
     statusMessage: query.data || initialStatusMessage,
     isLoading: query.isLoading,
-    setStatusMessage: setStatusMessageMutation.mutate,
+    setStatusMessage,
   };
 }

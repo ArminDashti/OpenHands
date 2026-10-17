@@ -6,7 +6,6 @@ interface BrowserState {
   screenshotSrc: string;
 }
 
-// Initial state
 const initialBrowser: BrowserState = {
   url: "https://github.com/All-Hands-AI/OpenHands",
   screenshotSrc: "",
@@ -19,7 +18,6 @@ export function useBrowser() {
   const queryClient = useQueryClient();
   const browserQueryKey = QueryKeys.browser;
 
-  // Query for browser state
   const query = useQuery({
     queryKey: browserQueryKey,
     queryFn: () => {
@@ -30,16 +28,14 @@ export function useBrowser() {
       // Otherwise use initial state
       return initialBrowser;
     },
-    initialData: initialBrowser, // Use initialBrowser directly to ensure it's always defined
-    staleTime: Infinity, // We manage updates manually through mutations
+    initialData: initialBrowser,
+    staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 
-  // Function to directly set the URL (synchronous)
   const setUrlSync = (url: string) => {
-    // Get current state
     const previousState =
       queryClient.getQueryData<BrowserState>(browserQueryKey) || initialBrowser;
     // Update state
@@ -56,7 +52,6 @@ export function useBrowser() {
 
   // Function to directly set the screenshot source (synchronous)
   const setScreenshotSrcSync = (screenshotSrc: string) => {
-    // Get current state
     const previousState =
       queryClient.getQueryData<BrowserState>(browserQueryKey) || initialBrowser;
     // Update state
@@ -79,7 +74,6 @@ export function useBrowser() {
   };
 
   return {
-    // State
     url: query.data?.url || initialBrowser.url,
     screenshotSrc: query.data?.screenshotSrc || initialBrowser.screenshotSrc,
     isLoading: query.isLoading,

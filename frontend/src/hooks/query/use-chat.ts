@@ -1,4 +1,4 @@
-import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Message } from "#/message";
 import { ActionSecurityRisk } from "#/hooks/query/use-security-analyzer";
 import {
@@ -286,11 +286,20 @@ export function useChat() {
   return {
     messages: query.data?.messages || [],
     isLoading: query.isLoading,
-    addUserMessage: addUserMessageMutation.mutate,
-    addAssistantMessage: addAssistantMessageMutation.mutate,
-    addAssistantAction: addAssistantActionMutation.mutate,
-    addAssistantObservation: addAssistantObservationMutation.mutate,
-    addErrorMessage: addErrorMessageMutation.mutate,
-    clearMessages: clearMessagesMutation.mutate,
+    addUserMessage: (payload: {
+      content: string;
+      imageUrls: string[];
+      timestamp: string;
+      pending?: boolean;
+    }) => addUserMessage(queryClient, payload),
+    addAssistantMessage: (content: string) =>
+      addAssistantMessage(queryClient, content),
+    addAssistantAction: (action: OpenHandsAction) =>
+      addAssistantAction(queryClient, action),
+    addAssistantObservation: (observation: OpenHandsObservation) =>
+      addAssistantObservation(queryClient, observation),
+    addErrorMessage: (payload: { id?: string; message: string }) =>
+      addErrorMessage(queryClient, payload),
+    clearMessages: () => clearMessages(queryClient),
   };
 }
