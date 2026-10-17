@@ -1,7 +1,7 @@
-import os
+"""Shared server dependencies - DEPRECATED.
 
-import socketio
-from dotenv import load_dotenv
+This module is deprecated and maintained only for backward compatibility.
+New code should use the context system from openhands.server.context instead.
 
 from openhands.core.config import load_app_config
 from openhands.server.session import SessionManager
@@ -10,18 +10,13 @@ from openhands.storage import get_file_store
 print(f'Initializing at {__file__}')
 print(f'Module name: {__name__}')
 
-load_dotenv()
+Migration guide:
+    # Old way (deprecated)
+    from openhands.server.shared import config, server_config
 
 config = load_app_config()
 file_store = get_file_store(config.file_store, config.file_store_path)
 
-client_manager = None
-redis_host = os.environ.get('REDIS_HOST')
-if redis_host:
-    client_manager = socketio.AsyncRedisManager(
-        f'redis://{redis_host}',
-        redis_options={'password': os.environ.get('REDIS_PASSWORD')},
-    )
 
 
 sio = socketio.AsyncServer(

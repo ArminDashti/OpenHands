@@ -1,8 +1,7 @@
 import warnings
 from contextlib import asynccontextmanager
 
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore')
+from openhands.server.factory import create_default_app
 
 from fastapi import (
     FastAPI,
