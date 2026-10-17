@@ -1,13 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getQueryReduxBridge } from "#/utils/query-redux-bridge";
-
+import { QueryKeys } from "./query-keys";
 export enum ActionSecurityRisk {
   UNKNOWN = -1,
   LOW = 0,
   MEDIUM = 1,
   HIGH = 2,
 }
-
 export type SecurityAnalyzerLog = {
   id: number;
   content: string;
@@ -15,70 +13,40 @@ export type SecurityAnalyzerLog = {
   confirmation_state?: "awaiting_confirmation" | "confirmed" | "rejected";
   confirmed_changed: boolean;
 };
-
 interface SecurityAnalyzerState {
   logs: SecurityAnalyzerLog[];
 }
-
 // Initial state
 const initialSecurityAnalyzer: SecurityAnalyzerState = {
   logs: [],
 };
-
 /**
  * Hook to access and manipulate security analyzer data using React Query
- * This replaces the Redux securityAnalyzer slice functionality
+ * Hook to access and manipulate state data
  */
 export function useSecurityAnalyzer() {
   const queryClient = useQueryClient();
-
-  // Try to get the bridge, but don't throw if it's not initialized (for tests)
-  let bridge: ReturnType<typeof getQueryReduxBridge> | null = null;
-  try {
-    bridge = getQueryReduxBridge();
-  } catch (error) {
-    // In tests, we might not have the bridge initialized
-    // eslint-disable-next-line no-console
-    console.warn(
-      "QueryReduxBridge not initialized, using default security analyzer state",
-    );
-  }
-
-  // Get initial state from Redux if this is the first time accessing the data
+  const queryClient = useQueryClient();
   const getInitialSecurityAnalyzerState = (): SecurityAnalyzerState => {
     // If we already have data in React Query, use that
     const existingData = queryClient.getQueryData<SecurityAnalyzerState>([
       "securityAnalyzer",
     ]);
     if (existingData) return existingData;
-
-    // Otherwise, get initial data from Redux if bridge is available
-    if (bridge) {
-      try {
-        return bridge.getReduxSliceState<SecurityAnalyzerState>(
-          "securityAnalyzer",
-        );
-      } catch (error) {
-        // If we can't get the state from Redux, return the initial state
         return initialSecurityAnalyzer;
       }
     }
-
-    // If bridge is not available, return the initial state
     return initialSecurityAnalyzer;
   };
-
   // Query for security analyzer state
   const query = useQuery({
-    queryKey: ["securityAnalyzer"],
+    queryKey: QueryKeys.securityAnalyzer,
     queryFn: () => {
       // First check if we already have data in the query cache
       const existingData = queryClient.getQueryData<SecurityAnalyzerState>([
         "securityAnalyzer",
       ]);
       if (existingData) return existingData;
-
-      // Otherwise get from the bridge or use initial state
       return getInitialSecurityAnalyzerState();
     },
     initialData: initialSecurityAnalyzer, // Use initialSecurityAnalyzer directly to ensure it's always defined
@@ -87,19 +55,16 @@ export function useSecurityAnalyzer() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
-
   // Function to append security analyzer input (synchronous)
   const appendSecurityAnalyzerInput = (message: {
     payload: Record<string, unknown>;
   }) => {
     // Get current state
     const previousState =
-      queryClient.getQueryData<SecurityAnalyzerState>(["securityAnalyzer"]) ||
+      queryClient.getQueryData<SecurityAnalyzerState>(QueryKeys.securityAnalyzer) ||
       initialSecurityAnalyzer;
-
     // Safely access nested properties
     const args = message.payload?.args as Record<string, unknown> | undefined;
-
     const log: SecurityAnalyzerLog = {
       id: typeof message.payload?.id === "number" ? message.payload.id : 0,
       content:
@@ -122,7 +87,6 @@ export function useSecurityAnalyzer() {
           : undefined,
       confirmed_changed: false,
     };
-
     // Find existing log if any
     const existingLogIndex = previousState.logs.findIndex(
       (stateLog) =>
@@ -130,9 +94,7 @@ export function useSecurityAnalyzer() {
         (stateLog.confirmation_state === "awaiting_confirmation" &&
           stateLog.content === log.content),
     );
-
     let newLogs = [...previousState.logs];
-
     if (existingLogIndex !== -1) {
       // Update existing log
       if (
@@ -154,25 +116,21 @@ export function useSecurityAnalyzer() {
       // Add new log
       newLogs = [...newLogs, log];
     }
-
     // Update state
     const newState = {
       ...previousState,
       logs: newLogs,
     };
-
     // Set the state synchronously
     queryClient.setQueryData<SecurityAnalyzerState>(
-      ["securityAnalyzer"],
+      QueryKeys.securityAnalyzer,
       newState,
     );
   };
-
   return {
     // State
     logs: query.data?.logs || initialSecurityAnalyzer.logs,
     isLoading: query.isLoading,
-
     // Actions
     appendSecurityAnalyzerInput,
   };
