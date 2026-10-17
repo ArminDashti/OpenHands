@@ -20,8 +20,9 @@
  *   ┌─────────────┐    ┌───────────────┐         ┌──────────────────┐
  *   │ sirv-cli    │    │ Agent Server  │         │ Automation       │
  *   │ build/      │    │ (uvx) :18000  │         │ Backend (uvx)    │
- *   │ :3001       │    │               │         │ :18001           │
+ *   │ :3001*      │    │               │         │ :18001           │
  *   └─────────────┘    └───────────────┘         └──────────────────┘
+ *   (* default; falls back to a free port if 3001 is taken)
  *
  * Usage:
  *   npm run dev:static

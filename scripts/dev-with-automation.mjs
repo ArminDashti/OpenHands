@@ -17,9 +17,10 @@
  *          ▼                    ▼                         ▼
  *   ┌─────────────┐    ┌───────────────┐         ┌──────────────────┐
  *   │ Vite        │    │ Agent Server  │         │ Automation       │
- *   │ :3001       │    │ (uvx) :18000  │         │ Backend (uvx)    │
+ *   │ :3001*      │    │ (uvx) :18000  │         │ Backend (uvx)    │
  *   │             │    │               │         │ :18001           │
  *   └─────────────┘    └───────────────┘         └──────────────────┘
+ *   (* default; falls back to a free port if 3001 is taken)
  *
  * Usage:
  *   node scripts/dev-with-automation.mjs
@@ -988,6 +989,29 @@ function buildAutomationTelemetryEnv(env = process.env) {
   };
 }
 
+/**
+ * CORS allow-list for the automation backend.
+ *
+ * The backend must accept requests from every origin the canvas browser can
+ * be on: the ingress origin, and the frontend (Vite/static-server) origin,
+ * which is browsable directly. The frontend port is the resolved
+ * `config.vitePort` — when the default 3001 is taken it falls back to a free
+ * port, so the allow-list must follow the resolved value instead of a
+ * hardcoded 3001 (#17546). An explicit `AUTOMATION_CORS_ORIGINS` env var
+ * always wins.
+ */
+function buildAutomationCorsOrigins(config, env = process.env) {
+  if (env.AUTOMATION_CORS_ORIGINS) return env.AUTOMATION_CORS_ORIGINS;
+  const { ingressPort, launchFrontend, vitePort } = config;
+  return [
+    `http://localhost:${ingressPort}`,
+    `http://127.0.0.1:${ingressPort}`,
+    ...(launchFrontend
+      ? [`http://localhost:${vitePort}`, `http://127.0.0.1:${vitePort}`]
+      : []),
+  ].join(",");
+}
+
 function startAgentServer(config) {
   logService(
     "agent-server",
@@ -1825,6 +1849,7 @@ function startStaticFrontend(config, staticDir) {
 
 export {
   buildAgentServerAutomationEnv,
+  buildAutomationCorsOrigins,
   buildAutomationCommand,
   buildAutomationCorsOrigins,
   buildAutomationTelemetryEnv,

@@ -936,6 +936,75 @@ describe("buildConfig", () => {
     expect(config.vitePort).toBe(19522);
   });
 
+  it("keeps the frontend port at its default when 3001 is free", async () => {
+    // The key-path isolation helper redirects every service port to a high
+    // number; drop the vite override so the default 3001 is used.
+    const env = envWithIsolatedKeyPath();
+    delete env.OH_CANVAS_SAFE_VITE_PORT;
+    const config = await buildConfig({}, env);
+    expect(config.vitePort).toBe(DEFAULT_VITE_PORT);
+  });
+
+  it("falls back to a free frontend port when the default 3001 is busy", async () => {
+    const busyPort = DEFAULT_VITE_PORT;
+    const server = net.createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.listen(busyPort, "127.0.0.1", () => {
+        servers.push(server);
+        resolve();
+      });
+      server.on("error", reject);
+    });
+
+    const config = await buildConfig({}, envWithIsolatedKeyPath());
+
+    // Should succeed and pick a different, free port instead of aborting.
+    expect(config.vitePort).not.toBe(busyPort);
+    expect(config.vitePort).toBeGreaterThan(0);
+  });
+
+  it("honors an explicit frontend port override when that port is free", async () => {
+    const preferred = 19510;
+    const config = await buildConfig(
+      {},
+      envWithIsolatedKeyPath({ OH_CANVAS_SAFE_VITE_PORT: String(preferred) }),
+    );
+
+    expect(config.vitePort).toBe(preferred);
+  });
+
+  it("falls back to a free port when the explicit frontend override is busy", async () => {
+    const preferred = 19511;
+    const server = net.createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.listen(preferred, "127.0.0.1", () => {
+        servers.push(server);
+        resolve();
+      });
+      server.on("error", reject);
+    });
+
+    const config = await buildConfig(
+      {},
+      envWithIsolatedKeyPath({ OH_CANVAS_SAFE_VITE_PORT: String(preferred) }),
+    );
+
+    expect(config.vitePort).not.toBe(preferred);
+    expect(config.vitePort).toBeGreaterThan(0);
+  });
+
+  it("does not allocate the frontend port in backend-only mode", async () => {
+    // No frontend runs, so the vite port sticks to its preferred value rather
+    // than being resolved against the network.
+    const config = await buildConfig(
+      { backendOnly: true },
+      envWithIsolatedKeyPath(),
+    );
+
+    expect(config.launchFrontend).toBe(false);
+    expect(config.vitePort).toBe(19903);
+  });
+
   it("allocates valid ports for all services", async () => {
     const config = await buildConfig({}, envWithIsolatedKeyPath());
 
