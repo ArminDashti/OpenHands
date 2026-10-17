@@ -45,6 +45,7 @@ router = APIRouter(prefix='/webhooks', tags=['Webhooks'])
 sandbox_service_dependency = depends_sandbox_service()
 event_service_dependency = depends_event_service()
 app_conversation_info_service_dependency = depends_app_conversation_info_service()
+sandbox_service_dependency = depends_sandbox_service()
 jwt_dependency = depends_jwt_service()
 config = get_global_config()
 db_session_dependency = depends_db_session()
@@ -104,6 +105,9 @@ async def on_conversation_update(
         sandbox_id=sandbox_info.id,
         created_by_user_id=sandbox_info.created_by_user_id,
         llm_model=conversation_info.agent.llm.model,
+        agent_kind=existing.agent_kind,
+        acp_session_id=existing.acp_session_id,
+        acp_session_cwd=existing.acp_session_cwd,
         # Git parameters
         selected_repository=existing.selected_repository,
         selected_branch=existing.selected_branch,
@@ -124,6 +128,7 @@ async def on_event(
     conversation_id: UUID,
     sandbox_info: SandboxInfo = Depends(valid_sandbox),
     app_conversation_info_service: AppConversationInfoService = app_conversation_info_service_dependency,
+    sandbox_service: SandboxService = sandbox_service_dependency,
     event_service: EventService = event_service_dependency,
 ) -> Success:
     """Webhook callback for when event stream events occur."""

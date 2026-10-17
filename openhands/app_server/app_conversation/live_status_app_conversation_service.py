@@ -21,6 +21,9 @@ from openhands.app_server.app_conversation.acp_session_snapshot_service import (
     AcpSessionSnapshotService,
     supports_native_session_resume,
 )
+from openhands.app_server.app_conversation.acp_resume import (
+    restore_acp_resume_artifacts,
+)
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
 )
@@ -212,6 +215,12 @@ class LiveStatusAppConversationService(GitAppConversationService):
                     sandbox_spec.working_dir,
                 )
             )
+            if isinstance(start_conversation_request, StartACPConversationRequest):
+                await self._restore_acp_resume_artifacts(
+                    existing_app_conversation_info,
+                    remote_workspace,
+                    start_conversation_request,
+                )
 
             # update status
             task.status = AppConversationStartTaskStatus.STARTING_CONVERSATION
