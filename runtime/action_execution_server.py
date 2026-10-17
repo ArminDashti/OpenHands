@@ -35,6 +35,7 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
+    FileEditAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
@@ -42,6 +43,7 @@ from openhands.events.action import (
 from openhands.events.observation import (
     CmdOutputObservation,
     ErrorObservation,
+    FileEditObservation,
     FileReadObservation,
     FileWriteObservation,
     IPythonRunCellObservation,
@@ -70,6 +72,10 @@ INIT_COMMANDS = [
 
 SESSION_API_KEY = os.environ.get('SESSION_API_KEY')
 api_key_header = APIKeyHeader(name='X-Session-API-Key', auto_error=False)
+
+HEAD = '<<<<<<< SEARCH'
+DIVIDER = '======='
+TAIL = '>>>>>>> REPLACE'
 
 
 def verify_api_key(api_key: str = Depends(api_key_header)):
@@ -344,6 +350,55 @@ class ActionExecutor:
         except PermissionError:
             return ErrorObservation(f'Malformed paths not permitted: {filepath}')
         return FileWriteObservation(content='', path=filepath)
+
+    async def edit(self, action: FileEditAction) -> Observation:
+        diff_blocks = re.search(
+            f'(.*)\n{HEAD}(.*)\n{DIVIDER}(.*)\n{TAIL}', action.diff_block, re.DOTALL
+        )
+        if not diff_blocks or len(diff_blocks.groups()) < 3:
+            found_head = re.search(f'{HEAD}', action.diff_block) is not None
+            found_divider = re.search(f'{DIVIDER}', action.diff_block) is not None
+            found_tail = re.search(f'{TAIL}', action.diff_block) is not None
+
+            error_msg = 'Could not resolve diff block into search/replace blocks.'
+            if found_head and (not found_tail):
+                error_msg = 'The diff block got cut off because it is too long. Try breaking it into smaller SEARCH/REPLACE blocks.'
+            elif found_head and found_tail and (not found_divider):
+                error_msg = 'Could not find the divider between SEARCH/REPLACE blocks.'
+            return ErrorObservation(error_msg)
+
+        path = diff_blocks.group(1)
+        search_block = diff_blocks.group(2)
+        replace_block = diff_blocks.group(3)
+        if search_block:
+            search_block = search_block[1:]
+        if replace_block:
+            replace_block = replace_block[1:]
+
+        working_dir = self._get_working_directory()
+        filepath = self._resolve_path(path, working_dir)
+        if not search_block:
+            create_file(filename=filepath)
+            append_file(
+                file_name=filepath,
+                content=replace_block,
+            )
+        else:
+            if search_block == replace_block:
+                return ErrorObservation(
+                    'Search block should not be same as Replace block.'
+                )
+            edit_file_by_replace(
+                file_name=filepath,
+                to_replace=search_block,
+                new_content=replace_block,
+            )
+        return FileEditObservation(
+            content=action.diff_block,
+            path=filepath,
+            search_block=search_block,
+            replace_block=replace_block,
+        )
 
     async def browse(self, action: BrowseURLAction) -> Observation:
         return await browse(action, self.browser)

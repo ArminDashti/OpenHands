@@ -6,6 +6,7 @@ from openhands.events.action import (
     AgentDelegateAction,
     AgentFinishAction,
     CmdRunAction,
+    FileEditAction,
     IPythonRunCellAction,
     MessageAction,
 )
@@ -17,6 +18,7 @@ class MemCodeActResponseParser(ResponseParser):
     - CmdRunAction(command) - bash command to run
     - IPythonRunCellAction(code) - IPython code to run
     - AgentDelegateAction(agent, inputs) - delegate action for (sub)task
+    - FileEditAction(diff_block) - Search/Replace block to edit.
     - MessageAction(content) - Message action to run (e.g. ask for clarification)
     - AgentFinishAction() - end the interaction
     - AgentSummarizeAction() - trigger a summarization of the conversation history

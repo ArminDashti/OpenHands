@@ -17,6 +17,7 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
+    FileEditAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
@@ -316,6 +317,10 @@ class Runtime(FileEditRuntimeMixin):
 
     @abstractmethod
     def write(self, action: FileWriteAction) -> Observation:
+        pass
+
+    @abstractmethod
+    def edit(self, action: FileEditAction) -> Observation:
         pass
 
     @abstractmethod
