@@ -7,6 +7,9 @@ from openhands.core.config import load_app_config
 from openhands.server.session import SessionManager
 from openhands.storage import get_file_store
 
+print(f'Initializing at {__file__}')
+print(f'Module name: {__name__}')
+
 load_dotenv()
 
 config = load_app_config()
