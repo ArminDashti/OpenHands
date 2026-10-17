@@ -42,6 +42,7 @@ from openhands.events.action import (
     CreatePlanAction,
     FileEditAction,
     FileReadAction,
+    FileWriteAction,
     IPythonRunCellAction,
     MessageAction,
 )
@@ -265,7 +266,6 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                     )
                 else:
                     if 'view_range' in other_kwargs:
-                        # Remove view_range from other_kwargs since it is not needed for FileEditAction
                         other_kwargs.pop('view_range')
                     action = FileEditAction(
                         path=path,
