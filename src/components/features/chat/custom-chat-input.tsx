@@ -27,6 +27,8 @@ export interface CustomChatInputProps {
   ) => void;
   className?: React.HTMLAttributes<HTMLDivElement>["className"];
   buttonClassName?: React.HTMLAttributes<HTMLButtonElement>["className"];
+  /** Whether the current model supports vision (multimodal input). Defaults to true. */
+  supportsVision?: boolean;
 }
 
 export function CustomChatInput({
@@ -41,6 +43,7 @@ export function CustomChatInput({
   onFilesPaste,
   className = "",
   buttonClassName = "",
+  supportsVision = true,
 }: CustomChatInputProps) {
   const [canSubmit, setCanSubmit] = React.useState(false);
   const {
@@ -173,6 +176,7 @@ export function CustomChatInput({
       <HiddenFileInput
         fileInputRef={fileInputRef}
         onChange={handleFileInputChange}
+        accept={fileAcceptAttribute}
       />
 
       {/* File autocomplete dropdown */}
@@ -235,6 +239,7 @@ export function CustomChatInput({
           slashItems={slashItems}
           slashSelectedIndex={slashSelectedIndex}
           onSlashSelect={selectSlashItem}
+          supportsVision={supportsVision}
         />
       </div>
     </div>
