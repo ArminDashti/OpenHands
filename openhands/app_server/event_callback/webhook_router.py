@@ -89,11 +89,14 @@ async def valid_conversation(
 
 @router.post('/{sandbox_id}/conversations')
 async def on_conversation_update(
-    conversation_info: ConversationInfo,
+    conversation_info: ACPConversationInfo,
     sandbox_info: SandboxInfo = Depends(valid_sandbox),
     app_conversation_info_service: AppConversationInfoService = app_conversation_info_service_dependency,
 ) -> Success:
-    """Webhook callback for when a conversation starts, pauses, resumes, or deletes."""
+    """Webhook callback for when a conversation starts, pauses, resumes, or deletes.
+
+    Accepts ACPConversationInfo so ACP-agent conversations are handled too.
+    """
     existing = await valid_conversation(
         conversation_info.id, sandbox_info, app_conversation_info_service
     )

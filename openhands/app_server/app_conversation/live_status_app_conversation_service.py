@@ -24,6 +24,9 @@ from openhands.app_server.app_conversation.acp_session_snapshot_service import (
 from openhands.app_server.app_conversation.acp_resume import (
     restore_acp_resume_artifacts,
 )
+from openhands.app_server.app_conversation.agent_server_routing import (
+    acp_display_name as _acp_display_name,
+)
 from openhands.app_server.app_conversation.app_conversation_info_service import (
     AppConversationInfoService,
 )

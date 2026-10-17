@@ -40,7 +40,17 @@ function extractPathPrefix(conversationUrl: string | null | undefined): string {
   if (conversationUrl && !conversationUrl.startsWith("/")) {
     try {
       const url = new URL(conversationUrl);
-      const pathBeforeApi = url.pathname.split("/api/conversations")[0] || "";
+      // Match both LLM (/api/conversations) and ACP (/api/acp/conversations) path shapes.
+      // Use includes() to avoid the JS truthiness bug where "".split(x)[0] === "" (falsy)
+      // and falls through to the wrong branch.
+      const acpMarker = "/api/acp/conversations";
+      const llmMarker = "/api/conversations";
+      let pathBeforeApi = "";
+      if (url.pathname.includes(acpMarker)) {
+        pathBeforeApi = url.pathname.slice(0, url.pathname.indexOf(acpMarker));
+      } else if (url.pathname.includes(llmMarker)) {
+        pathBeforeApi = url.pathname.slice(0, url.pathname.indexOf(llmMarker));
+      }
       return pathBeforeApi.replace(/\/$/, ""); // Remove trailing slash
     } catch {
       return "";
