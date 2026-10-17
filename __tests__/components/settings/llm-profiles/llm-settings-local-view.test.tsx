@@ -167,6 +167,18 @@ vi.mock("#/hooks/query/use-provider-connections");
 vi.mock("#/hooks/mutation/use-create-provider-connection");
 vi.mock("#/api/profiles-service/profiles-service.api");
 
+// Model providers live above the profiles list; mock the hook so it renders
+// the empty (non-loading) state and doesn't add a competing spinner.
+vi.mock("#/hooks/query/use-model-providers", () => ({
+  useModelProviders: () => ({ data: [], isLoading: false, error: null }),
+}));
+vi.mock("#/hooks/use-can-manage-org-profiles", () => ({
+  useCanManageOrgProfiles: () => true,
+}));
+vi.mock("#/components/features/settings/model-providers/provider-form", () => ({
+  ProviderForm: () => null,
+}));
+
 const mockProfiles = [
   {
     name: "gpt-4-profile",

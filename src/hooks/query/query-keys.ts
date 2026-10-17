@@ -55,6 +55,11 @@ export const LLM_SUBSCRIPTION_QUERY_KEYS = {
   openaiModels: ["llm-subscription", "openai", "models"] as const,
 } as const;
 
+/** Model providers (connect a provider once, manage its models under it). */
+export const MODEL_PROVIDERS_QUERY_KEYS = {
+  all: ["model-providers"] as const,
+} as const;
+
 export const LOCAL_WORKSPACES_QUERY_KEYS = {
   all: ["local-workspaces"] as const,
 } as const;
