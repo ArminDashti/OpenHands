@@ -55,6 +55,8 @@ export function ChatInterface() {
   );
 
   const handleSendMessage = async (content: string, files: File[]) => {
+    console.log("ChatInterface - handleSendMessage called with content:", content);
+    
     if (messages.length === 0) {
       posthog.capture("initial_query_submitted", {
         entry_point: getEntryPoint(
@@ -98,8 +100,8 @@ export function ChatInterface() {
   };
 
   const isWaitingForUserInput =
-    curAgentState === AgentState.AWAITING_USER_INPUT ||
-    curAgentState === AgentState.FINISHED;
+    agentState === AgentState.AWAITING_USER_INPUT ||
+    agentState === AgentState.FINISHED;
 
   return (
     <div className="h-full flex flex-col justify-between">
@@ -122,7 +124,7 @@ export function ChatInterface() {
           <Messages
             messages={messages}
             isAwaitingUserConfirmation={
-              curAgentState === AgentState.AWAITING_USER_CONFIRMATION
+              agentState === AgentState.AWAITING_USER_CONFIRMATION
             }
           />
         )}
@@ -160,8 +162,8 @@ export function ChatInterface() {
           onSubmit={handleSendMessage}
           onStop={handleStop}
           isDisabled={
-            curAgentState === AgentState.LOADING ||
-            curAgentState === AgentState.AWAITING_USER_CONFIRMATION
+            agentState === AgentState.LOADING ||
+            agentState === AgentState.AWAITING_USER_CONFIRMATION
           }
           mode={curAgentState === AgentState.RUNNING ? "stop" : "submit"}
           value={messageToSend ?? ""}
