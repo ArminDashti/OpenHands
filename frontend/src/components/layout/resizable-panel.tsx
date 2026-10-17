@@ -114,14 +114,9 @@ export function ResizablePanel({
 
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (firstRef.current) {
-      firstRef.current.style.transition = "none";
-    }
-    if (secondRef.current) {
-      secondRef.current.style.transition = "none";
-    }
-    const position = isHorizontal ? e.clientX : e.clientY;
-    setDividerPosition(position);
+    if (firstRef.current) firstRef.current.style.transition = "none";
+    if (secondRef.current) secondRef.current.style.transition = "none";
+    setDividerPosition(isHorizontal ? e.clientX : e.clientY);
   };
 
   const getPanelStyle = useCallback(
