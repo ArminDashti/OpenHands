@@ -8,6 +8,7 @@ import { useLlmProfiles } from "#/hooks/query/use-llm-profiles";
 import { useAgentProfiles } from "#/hooks/query/use-agent-profiles";
 import { useActiveBackend } from "#/contexts/active-backend-context";
 import ProfilesService from "#/api/profiles-service/profiles-service.api";
+import type { ProfileListResponse } from "#/api/profiles-service/profiles-service.api";
 import AgentProfilesService, {
   WELL_KNOWN_DEFAULT_AGENT_PROFILE_NAME,
   type AgentProfileListResponse,

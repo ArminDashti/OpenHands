@@ -53,6 +53,8 @@ const mockConversation = {
   selected_branch: null,
   git_provider: null,
   sandbox_id: "sandbox-abc",
+  llm_model: "openhands/glm-5.2",
+  agent_kind: "openhands",
   conversation_version: "V1" as const,
 };
 
@@ -96,6 +98,8 @@ describe("useNewConversationCommand", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockConversation.llm_model = "openhands/glm-5.2";
+    mockConversation.agent_kind = "openhands";
     captureMock = vi
       .spyOn(telemetry, "trackEvent")
       .mockResolvedValue(undefined);
