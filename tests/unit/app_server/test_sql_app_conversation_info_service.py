@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -178,6 +179,114 @@ class TestSQLAppConversationInfoService:
             retrieved_info.acp_session_cwd
             == sample_conversation_info.acp_session_cwd
         )
+
+    @pytest.mark.asyncio
+    async def test_concurrent_saves_recover_from_duplicate_key_race(
+        self,
+        sample_conversation_info: AppConversationInfo,
+    ):
+        """Two concurrent writers can both miss a row before one insert wins."""
+
+        class ScalarResult:
+            def __init__(self, row):
+                self.row = row
+
+            def scalar_one_or_none(self):
+                return self.row
+
+        class RaceyConversationMetadataTable:
+            def __init__(self, conversation_id: str):
+                self.conversation_id = conversation_id
+                self.rows = {}
+                self.merge_count = 0
+                self.all_writers_ready = asyncio.Event()
+                self.unique_index_lock = asyncio.Lock()
+                self.duplicate_errors = 0
+                self.recovery_selects = 0
+
+            async def wait_until_both_writers_have_selected_no_row(self):
+                self.merge_count += 1
+                if self.merge_count == 2:
+                    self.all_writers_ready.set()
+                await self.all_writers_ready.wait()
+
+        def make_db_session_mock(insert_delay: float) -> Mock:
+            session = Mock(spec=AsyncSession)
+            pending_insert = None
+
+            async def merge(stored):
+                nonlocal pending_insert
+                pending_insert = stored
+                await table.wait_until_both_writers_have_selected_no_row()
+
+            async def commit():
+                nonlocal pending_insert
+                if pending_insert is None:
+                    return
+
+                stored = pending_insert
+                pending_insert = None
+                await asyncio.sleep(insert_delay)
+
+                async with table.unique_index_lock:
+                    if stored.conversation_id in table.rows:
+                        table.duplicate_errors += 1
+                        raise IntegrityError(
+                            'INSERT INTO conversation_metadata',
+                            {},
+                            Exception(
+                                'duplicate key value violates unique constraint '
+                                '"conversation_metadata_pkey"'
+                            ),
+                        )
+                    table.rows[stored.conversation_id] = stored
+
+            async def rollback():
+                nonlocal pending_insert
+                pending_insert = None
+
+            async def execute(_query):
+                table.recovery_selects += 1
+                await asyncio.sleep(0)
+                return ScalarResult(table.rows.get(table.conversation_id))
+
+            session.merge = AsyncMock(side_effect=merge)
+            session.commit = AsyncMock(side_effect=commit)
+            session.rollback = AsyncMock(side_effect=rollback)
+            session.execute = AsyncMock(side_effect=execute)
+            return session
+
+        conversation_id = str(sample_conversation_info.id)
+        table = RaceyConversationMetadataTable(conversation_id)
+        webhook_session = make_db_session_mock(insert_delay=0.01)
+        live_status_session = make_db_session_mock(insert_delay=0.05)
+        webhook_service = SQLAppConversationInfoService(
+            db_session=cast(AsyncSession, webhook_session),
+            user_context=SpecifyUserContext(user_id='test_user'),
+        )
+        live_status_service = SQLAppConversationInfoService(
+            db_session=cast(AsyncSession, live_status_session),
+            user_context=SpecifyUserContext(user_id='test_user'),
+        )
+
+        webhook_info = sample_conversation_info.model_copy(
+            deep=True, update={'title': 'metadata from webhook'}
+        )
+        live_status_info = sample_conversation_info.model_copy(
+            deep=True, update={'title': 'metadata from live status'}
+        )
+
+        await asyncio.gather(
+            webhook_service.save_app_conversation_info(webhook_info),
+            live_status_service.save_app_conversation_info(live_status_info),
+        )
+
+        assert table.merge_count == 2
+        assert table.duplicate_errors == 1
+        assert table.recovery_selects == 1
+        webhook_session.rollback.assert_not_awaited()
+        live_status_session.rollback.assert_awaited_once()
+        assert table.rows[conversation_id].title == live_status_info.title
 
     @pytest.mark.asyncio
     async def test_get_nonexistent_conversation_info(
