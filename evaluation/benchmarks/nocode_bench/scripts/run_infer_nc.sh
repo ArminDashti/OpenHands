@@ -40,12 +40,17 @@ fi
 
 
 if [ -z "$DATASET" ]; then
-  echo "DATASET not specified, use default princeton-nlp/SWE-bench_Lite"
-  DATASET="princeton-nlp/SWE-bench_Lite"
+  echo "DATASET not specified, use default wentingzhao/commit0_combined"
+  DATASET="wentingzhao/commit0_combined"
+fi
+
+if [ -z "$REPO_SPLIT" ]; then
+  echo "REPO_SPLIT not specified, use default lite"
+  REPO_SPLIT=0
 fi
 
 if [ -z "$SPLIT" ]; then
-  echo "SPLIT not specified, use default test"
+  echo "HF SPLIT not specified, use default test"
   SPLIT="test"
 fi
 

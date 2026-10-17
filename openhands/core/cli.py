@@ -34,6 +34,7 @@ from openhands.events.observation import (
     AgentStateChangedObservation,
     CmdOutputObservation,
     FileEditObservation,
+    NullObservation,
 )
 from openhands.io import read_input, read_task
 

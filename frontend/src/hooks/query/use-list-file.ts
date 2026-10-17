@@ -13,4 +13,3 @@ export const useListFile = (config: UseListFileConfig) => {
     queryFn: () => OpenHands.getFile(conversationId, config.path),
     enabled: false, // don't fetch by default, trigger manually via `refetch`
   });
-};

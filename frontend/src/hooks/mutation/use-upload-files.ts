@@ -13,4 +13,3 @@ export const useUploadFiles = () => {
     mutationFn: ({ files }: UploadFilesArgs) =>
       OpenHands.uploadFiles(conversationId, files),
   });
-};

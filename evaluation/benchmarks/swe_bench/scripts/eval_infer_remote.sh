@@ -28,7 +28,7 @@ fi
 
 echo "... Evaluating on $INPUT_FILE ..."
 
-COMMAND="poetry run python evaluation/swe_bench/eval_infer.py \
+COMMAND="poetry run python evaluation/benchmarks/swe_bench/eval_infer.py \
   --eval-num-workers $NUM_WORKERS \
   --input-file $INPUT_FILE \
   --dataset $DATASET \
