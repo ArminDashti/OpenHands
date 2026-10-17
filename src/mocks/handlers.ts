@@ -58,3 +58,5 @@ export {
   resetMockAgentProfiles,
   seedMockAgentProfiles,
 };
+
+export { AGENT_PROFILES_HANDLERS, resetMockAgentProfiles };
