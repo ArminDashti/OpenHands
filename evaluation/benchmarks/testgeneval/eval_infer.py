@@ -69,8 +69,6 @@ def get_config(instance: pd.Series) -> AppConfig:
             api_key=os.environ.get('ALLHANDS_API_KEY'),
             remote_runtime_api_url=os.environ.get('SANDBOX_REMOTE_RUNTIME_API_URL'),
         ),
-        workspace_base=None,
-        workspace_mount_path=None,
     )
 
 

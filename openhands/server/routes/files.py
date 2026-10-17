@@ -126,7 +126,9 @@ async def select_file(file: str, request: Request):
     """
     runtime: Runtime = request.state.conversation.runtime
 
-    file = os.path.join(runtime.config.workspace_mount_path_in_sandbox, file)
+    # Use the file path as-is since it should be absolute inside the runtime
+    if not file.startswith('/'):
+        file = os.path.join('/workspace', file)
     read_action = FileReadAction(file)
     try:
         observation = await call_sync_from_async(runtime.run_action, read_action)

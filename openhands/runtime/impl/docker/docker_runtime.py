@@ -214,7 +214,7 @@ class DockerRuntime(ActionExecutionClient):
             volumes = None
         self.log(
             'debug',
-            f'Sandbox workspace: {self.config.workspace_mount_path_in_sandbox}',
+            'Sandbox workspace: /workspace',
         )
 
         if self.config.sandbox.browsergym_eval_env is not None:
