@@ -41,6 +41,7 @@ pre-commit = "*"
 pytest = "*"
 
 
+
 [tool.poetry.group.evaluation.dependencies]
 torch = "*"
 
