@@ -28,6 +28,8 @@ class OrgStore:
             org = Org(**kwargs)
             org.org_version = ORG_SETTINGS_VERSION
             org.default_llm_model = get_default_litellm_model()
+            if org.v1_enabled is None:
+                org.v1_enabled = DEFAULT_V1_ENABLED
             session.add(org)
             session.commit()
             session.refresh(org)

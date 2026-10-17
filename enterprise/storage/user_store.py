@@ -301,6 +301,8 @@ class UserStore:
 
         settings = Settings(language='en', enable_proactive_conversation_starters=True)
 
+        default_settings.v1_enabled = DEFAULT_V1_ENABLED
+
         from storage.lite_llm_manager import LiteLlmManager
 
         settings = await LiteLlmManager.create_entries(org_id, user_id, settings)
