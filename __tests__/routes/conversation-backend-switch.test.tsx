@@ -14,6 +14,11 @@ import {
 import { ActiveBackendProvider } from "#/contexts/active-backend-context";
 import { NavigationProvider } from "#/context/navigation-context";
 import ConversationView from "#/routes/conversation";
+import { resumeCloudSandbox } from "#/api/cloud/conversation-service.api";
+import {
+  __clearCloudAutoResumeSuppressionsForTests,
+  suppressNextCloudAutoResume,
+} from "#/api/cloud/cloud-sandbox-resume-suppression";
 import type { Backend } from "#/api/backend-registry/types";
 import type { AppConversation } from "#/api/conversation-service/agent-server-conversation-service.types";
 import { getCloudSharedConversation } from "#/api/cloud/shared-conversation-service.api";
@@ -92,7 +97,10 @@ const cloudBackend: Backend = {
 
 const CLOUD_CONVERSATION_ID = "conv-cloud";
 
-function makeConversation(id: string): AppConversation {
+function makeConversation(
+  id: string,
+  overrides: Partial<AppConversation> = {},
+): AppConversation {
   return {
     id,
     created_by_user_id: null,
@@ -112,6 +120,7 @@ function makeConversation(id: string): AppConversation {
     session_api_key: null,
     sandbox_id: null,
     sub_conversation_ids: [],
+    ...overrides,
   };
 }
 
@@ -204,6 +213,8 @@ beforeEach(() => {
   vi.mocked(
     AgentServerConversationService.batchGetAppConversations,
   ).mockReset();
+  vi.mocked(resumeCloudSandbox).mockReset();
+  vi.mocked(resumeCloudSandbox).mockResolvedValue(undefined);
   vi.mocked(
     AgentServerConversationService.batchGetAppConversations,
   ).mockResolvedValue([makeConversation(CLOUD_CONVERSATION_ID)]);
@@ -211,6 +222,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  __clearCloudAutoResumeSuppressionsForTests();
   window.localStorage.clear();
   __resetActiveStoreForTests();
 });
