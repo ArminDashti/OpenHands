@@ -11,14 +11,14 @@ export const useDeleteConversation = () => {
         variables.conversationId,
       ),
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ["user", "conversations"] });
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
       const previousConversations = queryClient.getQueryData([
         "user",
         "conversations",
       ]);
 
       queryClient.setQueryData(
-        ["user", "conversations"],
+        ["conversations"],
         (old: { conversation_id: string }[] | undefined) =>
           old?.filter(
             (conv) => conv.conversation_id !== variables.conversationId,
@@ -35,7 +35,7 @@ export const useDeleteConversation = () => {
     onError: (err, variables, context) => {
       if (context?.previousConversations) {
         queryClient.setQueryData(
-          ["user", "conversations"],
+          ["conversations"],
           context.previousConversations,
         );
       }
