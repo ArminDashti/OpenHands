@@ -36,6 +36,8 @@ import { AddAutomationMenu } from "#/components/features/automations/add-automat
 import { AddAutomationModal } from "#/components/features/automations/add-automation-modal";
 import { ImportAutomationModal } from "#/components/features/automations/import-automation-modal";
 import { RecommendedAutomationsLauncher } from "#/components/features/automations/recommended-automations-launcher";
+import { AutomationConversationLaunchModal } from "#/components/features/automations/automation-conversation-launch-modal";
+import type { AutomationConversationLaunchRequest } from "#/components/features/automations/use-launch-automation-conversation";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { useTracking } from "#/hooks/use-tracking";
 import { useAutomationPermissions } from "#/hooks/use-automation-permissions";
@@ -113,7 +115,6 @@ export default function AutomationsList() {
     name: string;
   } | null>(null);
   const [editTarget, setEditTarget] = useState<Automation | null>(null);
-  const [isAddAutomationOpen, setIsAddAutomationOpen] = useState(false);
   const [importSpec, setImportSpec] = useState<AutomationSpec | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
@@ -218,6 +219,22 @@ export default function AutomationsList() {
     if (automation) {
       setEditTarget(automation);
     }
+  };
+
+  const handleFindOpportunities = () => {
+    setLaunchRequest({
+      intent: "find_opportunities",
+      source: "dashboard_header",
+      prompt: t(I18nKey.AUTOMATIONS$CREATE_AUTOMATION_PROMPT),
+    });
+  };
+
+  const handleAddAutomation = () => {
+    setLaunchRequest({
+      intent: "add_automation",
+      source: "dashboard_header",
+      prompt: t(I18nKey.AUTOMATIONS$ADD_AUTOMATION_PROMPT),
+    });
   };
 
   const handleExport = (automation: Automation) => {
@@ -524,9 +541,9 @@ export default function AutomationsList() {
         />
       )}
 
-      <AddAutomationModal
-        isOpen={isAddAutomationOpen}
-        onClose={() => setIsAddAutomationOpen(false)}
+      <AutomationConversationLaunchModal
+        request={launchRequest}
+        onClose={() => setLaunchRequest(null)}
       />
 
       <ImportAutomationModal

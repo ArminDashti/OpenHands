@@ -1,8 +1,13 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAutomationSubPageNav } from "#/components/features/automations/dashboard/use-automation-sub-page-nav";
 import { RecommendedAutomationsLauncher } from "#/components/features/automations/recommended-automations-launcher";
 import { SearchInput } from "#/components/features/automations/search-input";
+import { BrandButton } from "#/components/features/settings/brand-button";
 import { ManifestSubpageLayout } from "#/components/features/manifest/manifest-subpage-layout";
+import { AutomationConversationLaunchModal } from "#/components/features/automations/automation-conversation-launch-modal";
+import type { AutomationConversationLaunchRequest } from "#/components/features/automations/use-launch-automation-conversation";
+import { I18nKey } from "#/i18n/declaration";
 import { getTemplatesPageSpec } from "#/manifests/automation-interface";
 
 /**
@@ -18,11 +23,30 @@ export const clientLoader = () => {
 };
 
 export default function AutomationTemplates() {
+  const { t } = useTranslation("openhands");
   const [searchQuery, setSearchQuery] = useState("");
+  const [launchRequest, setLaunchRequest] =
+    useState<AutomationConversationLaunchRequest | null>(null);
   const spec = getTemplatesPageSpec();
   const nav = useAutomationSubPageNav();
 
   if (!spec || !nav) return null;
+
+  const handleFindOpportunities = () => {
+    setLaunchRequest({
+      intent: "find_opportunities",
+      source: "templates_banner",
+      prompt: t(I18nKey.AUTOMATIONS$CREATE_AUTOMATION_PROMPT),
+    });
+  };
+
+  const handleAddAutomation = () => {
+    setLaunchRequest({
+      intent: "add_automation",
+      source: "templates_banner",
+      prompt: t(I18nKey.AUTOMATIONS$ADD_AUTOMATION_PROMPT),
+    });
+  };
 
   return (
     <ManifestSubpageLayout
