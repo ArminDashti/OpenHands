@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from openhands.agenthub.codeact_agent.tools.unified import BashTool
-from openhands.agenthub.codeact_agent.tools.unified.base import ToolValidationError
+from openhands.agenthub.codeact_agent.tools.bash_tool import BashTool
+from openhands.core.exceptions import FunctionCallValidationError as ToolValidationError
 
 
 class TestBashToolSchema:
