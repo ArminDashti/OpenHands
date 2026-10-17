@@ -20,11 +20,23 @@ class StuckDetector:
     def __init__(self, state: State):
         self.state = state
 
-    def is_stuck(self):
-        # filter out MessageAction with source='user' from history
+    def is_stuck(self, ui_mode: bool = False):
+        if ui_mode:
+            # In UI mode, only look at history after the last user message
+            last_user_msg_idx = -1
+            for i, event in enumerate(self.state.history):
+                if isinstance(event, MessageAction) and event.source == EventSource.USER:
+                    last_user_msg_idx = i
+
+            history_to_check = self.state.history[last_user_msg_idx + 1:]
+        else:
+            # In headless mode, look at all history
+            history_to_check = self.state.history
+
+        # Filter out user messages and null events
         filtered_history = [
             event
-            for event in self.state.history
+            for event in history_to_check
             if not (
                 (isinstance(event, MessageAction) and event.source == EventSource.USER)
                 or
@@ -78,43 +90,19 @@ class StuckDetector:
         # it takes 4 actions and 4 observations to detect a loop
         # assert len(last_actions) == 4 and len(last_observations) == 4
 
-        # reset almost_stuck reminder
-        self.state.almost_stuck = 0
-
-        # almost stuck? if two actions, obs are the same, we're almost stuck
-        if len(last_actions) >= 2 and len(last_observations) >= 2:
+        # Check for a loop of 4 identical action-observation pairs
+        if len(last_actions) == 4 and len(last_observations) == 4:
             actions_equal = all(
-                self._eq_no_pid(last_actions[0], action) for action in last_actions[:2]
+                self._eq_no_pid(last_actions[0], action) for action in last_actions
             )
             observations_equal = all(
                 self._eq_no_pid(last_observations[0], observation)
-                for observation in last_observations[:2]
+                for observation in last_observations
             )
 
-            # the last two actions and obs are the same?
             if actions_equal and observations_equal:
-                self.state.almost_stuck = 2
-
-            # the last three actions and observations are the same?
-            if len(last_actions) >= 3 and len(last_observations) >= 3:
-                if (
-                    actions_equal
-                    and observations_equal
-                    and self._eq_no_pid(last_actions[0], last_actions[2])
-                    and self._eq_no_pid(last_observations[0], last_observations[2])
-                ):
-                    self.state.almost_stuck = 1
-
-            if len(last_actions) == 4 and len(last_observations) == 4:
-                if (
-                    actions_equal
-                    and observations_equal
-                    and self._eq_no_pid(last_actions[0], last_actions[3])
-                    and self._eq_no_pid(last_observations[0], last_observations[3])
-                ):
-                    logger.warning('Action, Observation loop detected')
-                    self.state.almost_stuck = 0
-                    return True
+                logger.warning('Action, Observation loop detected')
+                return True
 
         return False
 
