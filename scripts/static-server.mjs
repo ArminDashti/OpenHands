@@ -27,6 +27,8 @@
  *     --route "/sockets=http://localhost:18000"
  */
 
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -104,6 +106,11 @@ export function parseArgs(argv = process.argv.slice(2), env = process.env) {
     sidebarLinks: null,
     basePath: "/",
     vscodeBasePath: null,
+    sdkCloudProxy: isEnvFlagEnabled(env.AGENT_CANVAS_ENABLE_SDK_CLOUD_PROXY),
+    sdkCloudProxyPort: Number.parseInt(
+      env.AGENT_CANVAS_SDK_CLOUD_PROXY_PORT || "18000",
+      10,
+    ),
     // Also settable via the --disable-telemetry flag below.
     disableTelemetry: isEnvFlagEnabled(env.AGENT_CANVAS_DISABLE_TELEMETRY),
   };
@@ -697,9 +704,67 @@ async function handleStatic(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Server
+function startSdkCloudProxyAgentServer(config) {
+  if (!config.sdkCloudProxy) return null;
+
+  if (!Number.isFinite(config.sdkCloudProxyPort) || config.sdkCloudProxyPort <= 0) {
+    throw new Error(
+      `Invalid AGENT_CANVAS_SDK_CLOUD_PROXY_PORT: ${config.sdkCloudProxyPort}`,
+    );
+  }
+
+  const sessionApiKey =
+    config.sessionApiKey ||
+    process.env.OH_SESSION_API_KEYS_0 ||
+    process.env.LOCAL_BACKEND_API_KEY ||
+    randomBytes(32).toString("hex");
+  config.sessionApiKey = sessionApiKey;
+  config.routes["/api/cloud-proxy"] = `http://127.0.0.1:${config.sdkCloudProxyPort}`;
+
+  const child = spawn(
+    "/usr/local/bin/openhands-agent-server",
+    ["--port", String(config.sdkCloudProxyPort)],
+    {
+      env: {
+        ...process.env,
+        HOME: "/tmp",
+        OH_SESSION_API_KEYS_0: sessionApiKey,
+        OH_SECRET_KEY:
+          process.env.OH_SECRET_KEY || randomBytes(32).toString("hex"),
+        OH_PERSISTENCE_DIR:
+          process.env.OH_PERSISTENCE_DIR || "/tmp/agent-canvas-cloud-proxy",
+        OH_CONVERSATIONS_PATH:
+          process.env.OH_CONVERSATIONS_PATH ||
+          "/tmp/agent-canvas-cloud-proxy/conversations",
+        OH_BASH_EVENTS_DIR:
+          process.env.OH_BASH_EVENTS_DIR ||
+          "/tmp/agent-canvas-cloud-proxy/bash_events",
+        OPENHANDS_SUPPRESS_BANNER: "1",
+      },
+      stdio: ["ignore", "inherit", "inherit"],
+    },
+  );
+
+  child.on("exit", (code, signal) => {
+    console.error(
+      `SDK cloud-proxy agent-server exited (code=${code}, signal=${signal})`,
+    );
+  });
+
+  const stopChild = () => {
+    if (!child.killed) child.kill("SIGTERM");
+  };
+  process.once("SIGINT", stopChild);
+  process.once("SIGTERM", stopChild);
+
+  return child;
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function startStaticServer(config) {
+  const sdkCloudProxyProcess = startSdkCloudProxyAgentServer(config);
   const route = createRouter(config.routes);
   const proxy = createProxyHandlers({ label: `static:${config.port}` });
   const dirAbs = resolve(config.dir);
@@ -817,7 +882,12 @@ export function startStaticServer(config) {
     }
     socket.destroy();
   });
-  server.on("close", uninstallDiagnostics);
+  server.on("close", () => {
+    uninstallDiagnostics();
+    if (sdkCloudProxyProcess && !sdkCloudProxyProcess.killed) {
+      sdkCloudProxyProcess.kill("SIGTERM");
+    }
+  });
 
   return new Promise((resolveListen) => {
     server.listen(config.port, config.host, () => {
