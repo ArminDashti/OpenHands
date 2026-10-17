@@ -1,7 +1,7 @@
 """create org tables from pgerd schema
 
-Revision ID: 084
-Revises: 083
+Revision ID: 089
+Revises: 088
 Create Date: 2025-01-07 00:00:00.000000
 
 """
@@ -13,8 +13,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '084'
-down_revision: Union[str, None] = '083'
+revision: str = '089'
+down_revision: Union[str, None] = '088'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -74,7 +74,6 @@ def upgrade() -> None:
             server_default=sa.text('false'),
         ),
         sa.Column('default_llm_model', sa.String, nullable=True),
-        sa.Column('_default_llm_api_key_for_byor', sa.String, nullable=True),
         sa.Column('default_llm_base_url', sa.String, nullable=True),
         sa.Column('remote_runtime_resource_factor', sa.Integer, nullable=True),
         sa.Column(
@@ -106,6 +105,7 @@ def upgrade() -> None:
             server_default=sa.text('false'),
         ),
         sa.Column('v1_enabled', sa.Boolean, nullable=True),
+        sa.Column('condenser_max_size', sa.Integer, nullable=True),
         sa.UniqueConstraint('name', name='org_name_unique'),
     )
 

@@ -5,6 +5,12 @@ Store class for managing users.
 import uuid
 from typing import Optional
 
+from server.constants import (
+    LITE_LLM_API_URL,
+    ORG_SETTINGS_VERSION,
+    PERSONAL_WORKSPACE_VERSION_TO_MODEL,
+    get_default_litellm_model,
+)
 from server.logger import logger
 from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload
@@ -40,6 +46,7 @@ class UserStore:
                 name=f'user_{user_id}_org',
                 contact_name=user_info['preferred_username'],
                 contact_email=user_info['email'],
+                v1_enabled=True,
             )
             session.add(org)
 
@@ -71,6 +78,9 @@ class UserStore:
             from storage.org_member_store import OrgMemberStore
 
             org_member_kwargs = OrgMemberStore.get_kwargs_from_settings(settings)
+            # avoid setting org member llm fields to use org defaults on user creation
+            del org_member_kwargs['llm_model']
+            del org_member_kwargs['llm_base_url']
             org_member = OrgMember(
                 org_id=org.id,
                 user_id=user.id,
@@ -108,6 +118,7 @@ class UserStore:
             org = Org(
                 id=uuid.UUID(user_id),
                 name=f'user_{user_id}_org',
+                org_version=user_settings.user_version,
                 contact_name=user_info['username'],
                 contact_email=user_info['email'],
             )
@@ -123,6 +134,10 @@ class UserStore:
                 str(org.id),
                 user_id,
                 decrypted_user_settings,
+            )
+
+            custom_settings = UserStore._has_custom_settings(
+                decrypted_user_settings, user_settings.user_version
             )
 
             # avoids circular reference. This migrate method is temprorary until all users are migrated.
@@ -142,6 +157,13 @@ class UserStore:
 
             org_kwargs = OrgStore.get_kwargs_from_user_settings(decrypted_user_settings)
             org_kwargs.pop('id', None)
+
+            # if user has custom settings, set org defaults to current version
+            if custom_settings:
+                org_kwargs['default_llm_model'] = get_default_litellm_model()
+                org_kwargs['llm_base_url'] = LITE_LLM_API_URL
+                org_kwargs['org_version'] = ORG_SETTINGS_VERSION
+
             for key, value in org_kwargs.items():
                 if hasattr(org, key):
                     setattr(org, key, value)
@@ -173,6 +195,14 @@ class UserStore:
             org_member_kwargs = OrgMemberStore.get_kwargs_from_user_settings(
                 decrypted_user_settings
             )
+
+            # if the user did not have custom settings in the old model,
+            # then use the org defaults by not setting org_member fields
+            if not custom_settings:
+                del org_member_kwargs['llm_model']
+                del org_member_kwargs['llm_base_url']
+                del org_member_kwargs['llm_api_key_for_byor']
+
             org_member = OrgMember(
                 org_id=org.id,
                 user_id=user.id,
@@ -368,3 +398,49 @@ class UserStore:
             if (normalized := c.name.lstrip('_')) and hasattr(user_settings, normalized)
         }
         return kwargs
+
+    @staticmethod
+    def _has_custom_settings(
+        user_settings: UserSettings, old_user_version: int | None
+    ) -> bool:
+        """
+        Check if user has custom LLM settings that should be preserved.
+        Returns True if user customized either model or base_url.
+
+        Args:
+            settings: The user's current settings
+            old_user_version: The user's old settings version, if any
+
+        Returns:
+            True if user has custom settings, False if using old defaults
+        """
+        # Normalize values
+        user_model = (
+            user_settings.llm_model.strip() or None if user_settings.llm_model else None
+        )
+        user_base_url = (
+            user_settings.llm_base_url.strip() or None
+            if user_settings.llm_base_url
+            else None
+        )
+
+        # Custom base_url = definitely custom settings (BYOK)
+        if user_base_url and user_base_url != LITE_LLM_API_URL:
+            return True
+
+        # No model set = using defaults
+        if not user_model:
+            return False
+
+        # Check if model matches old version's default
+        if (
+            old_user_version
+            and old_user_version < ORG_SETTINGS_VERSION
+            and old_user_version in PERSONAL_WORKSPACE_VERSION_TO_MODEL
+        ):
+            old_default_base = PERSONAL_WORKSPACE_VERSION_TO_MODEL[old_user_version]
+            user_model_base = user_model.split('/')[-1]
+            if user_model_base == old_default_base:
+                return False  # Matches old default
+
+        return True  # Custom model

@@ -22,8 +22,7 @@ from openhands.storage.data_models.conversation_metadata import ConversationTrig
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-# Import the SAAS service
-from enterprise.storage.saas_app_conversation_info_injector import (
+from enterprise.server.utils.saas_app_conversation_info_injector import (
     SaasSQLAppConversationInfoService,
 )
 from openhands.app_server.app_conversation.sql_app_conversation_info_service import (

@@ -9,7 +9,6 @@ from openhands.core.config import AppConfig
 from openhands.events import EventSource
 from openhands.events.action import CmdRunAction, MessageAction, RecallAction
 from openhands.events.action.message import SystemMessageAction
-from openhands.events.event import RecallType
 from openhands.events.observation import (
     CmdOutputObservation,
     Observation,

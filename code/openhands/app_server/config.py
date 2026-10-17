@@ -176,7 +176,7 @@ def config_from_env() -> AppServerConfig:
         if 'saas' in (os.getenv('OPENHANDS_CONFIG_CLS') or '').lower():
             try:
                 # Import enterprise injector dynamically
-                from enterprise.storage.saas_app_conversation_info_injector import (
+                from enterprise.server.utils.saas_app_conversation_info_injector import (
                     SaasAppConversationInfoServiceInjector,
                 )
 

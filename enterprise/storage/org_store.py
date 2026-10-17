@@ -5,7 +5,11 @@ Store class for managing organizations.
 from typing import Optional
 from uuid import UUID
 
-from server.constants import ORG_SETTINGS_VERSION, get_default_litellm_model
+from server.constants import (
+    LITE_LLM_API_URL,
+    ORG_SETTINGS_VERSION,
+    get_default_litellm_model,
+)
 from sqlalchemy.orm import joinedload
 from storage.database import session_maker
 from storage.org import Org
@@ -46,8 +50,10 @@ class OrgStore:
     @staticmethod
     def get_org_by_id(org_id: UUID) -> Org | None:
         """Get organization by ID."""
+        org = None
         with session_maker() as session:
-            return session.query(Org).filter(Org.id == org_id).first()
+            org = session.query(Org).filter(Org.id == org_id).first()
+        return OrgStore._validate_org_version(org)
 
     @staticmethod
     def get_current_org_from_keycloak_user_id(keycloak_user_id: str) -> Org | None:
@@ -68,13 +74,29 @@ class OrgStore:
                     f'Org not found for ID {org_id} as the current org for user {keycloak_user_id}'
                 )
                 return None
-            return org
+            return OrgStore._validate_org_version(org)
 
     @staticmethod
     def get_org_by_name(name: str) -> Org | None:
         """Get organization by name."""
+        org = None
         with session_maker() as session:
-            return session.query(Org).filter(Org.name == name).first()
+            org = session.query(Org).filter(Org.name == name).first()
+        return OrgStore._validate_org_version(org)
+
+    @staticmethod
+    def _validate_org_version(org: Org) -> Org | None:
+        """Check if we need to update org version."""
+        if org and org.org_version < ORG_SETTINGS_VERSION:
+            org = OrgStore.update_org(
+                org.id,
+                {
+                    'org_version': ORG_SETTINGS_VERSION,
+                    'default_llm_model': get_default_litellm_model(),
+                    'llm_base_url': LITE_LLM_API_URL,
+                },
+            )
+        return org
 
     @staticmethod
     def list_orgs() -> list[Org]:
@@ -146,4 +168,5 @@ class OrgStore:
 
             kwargs[key] = getattr(user_settings, normalized)
 
+        kwargs['org_version'] = user_settings.user_version
         return kwargs
