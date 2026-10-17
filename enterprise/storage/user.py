@@ -5,6 +5,7 @@ SQLAlchemy model for User.
 from uuid import uuid4
 
 from sqlalchemy import (
+    JSON,
     UUID,
     Boolean,
     Column,
