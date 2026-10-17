@@ -226,8 +226,12 @@ afterAll(async () => {
   // We restore real timers first so a test that left fake timers active can't
   // stall the drain.
   vi.useRealTimers();
-  // Reset handlers first so no new intercepted requests start processing
-  // during the drain window.
+  // Close the interceptor before draining so no *new* requests get
+  // intercepted while in-flight ones settle. Resetting handlers while a
+  // request is mid-flight can make it bypass interception and spawn a real
+  // (very late) network request; closing first caps the set of pending
+  // callbacks the drain has to flush.
+  server.close();
   server.resetHandlers();
   const drainDeadline = Date.now() + DRAIN_TIMEOUT_MS;
   while (inFlightRequestIds.size > 0 && Date.now() < drainDeadline) {
