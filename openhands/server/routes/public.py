@@ -1,8 +1,10 @@
 import warnings
 
 import requests
+from fastapi.responses import JSONResponse
 
 from openhands.security.options import SecurityAnalyzers
+from openhands.server.shared import conversation_manager
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
@@ -10,6 +12,7 @@ with warnings.catch_warnings():
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
 )
 
 from openhands.controller.agent import Agent
