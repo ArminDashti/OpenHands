@@ -17,7 +17,8 @@ export const Messages: React.FC<MessagesProps> = React.memo(
   ({ messages, isAwaitingUserConfirmation }) => {
     const { getOptimisticUserMessage } = useOptimisticUserMessageStore();
 
-    const optimisticUserMessage = getOptimisticUserMessage();
+    // Check if conversation metadata has trigger=resolver
+    const isResolverTrigger = conversation?.trigger === "resolver";
 
     const actionHasObservationPair = React.useCallback(
       (event: OpenHandsEvent): boolean => {
@@ -28,10 +29,8 @@ export const Messages: React.FC<MessagesProps> = React.memo(
           );
         }
 
-        return false;
-      },
-      [messages],
-    );
+      const isFirstUserMessageWithResolverTrigger =
+        index === 0 && message.sender === "user" && isResolverTrigger;
 
     // TODO: Implement microagent functionality for V1 if needed
     // For now, we'll skip microagent features
@@ -54,19 +53,37 @@ export const Messages: React.FC<MessagesProps> = React.memo(
           />
         ))}
 
-        {optimisticUserMessage && (
-          <ChatMessage type="user" message={optimisticUserMessage} />
-        )}
-      </>
-    );
-  },
-  (prevProps, nextProps) => {
-    // Prevent re-renders if messages are the same length
-    if (prevProps.messages.length !== nextProps.messages.length) {
-      return false;
-    }
+      if (message.type === "error" || message.type === "action") {
+        return (
+          <div key={index}>
+            <ExpandableMessage
+              type={message.type}
+              id={message.translationID}
+              message={message.content}
+              success={message.success}
+              observation={message.observation}
+              action={message.action}
+            />
+            {shouldShowConfirmationButtons && <ConfirmationButtons />}
+          </div>
+        );
+      }
 
-    return true;
+      return (
+        <ChatMessage
+          key={index}
+          type={message.sender}
+          message={message.content}
+          messageId={message.eventID}
+          feedback={message.feedback}
+        >
+          {message.imageUrls && message.imageUrls.length > 0 && (
+            <ImageCarousel size="small" images={message.imageUrls} />
+          )}
+          {shouldShowConfirmationButtons && <ConfirmationButtons />}
+        </ChatMessage>
+      );
+    });
   },
 );
 
