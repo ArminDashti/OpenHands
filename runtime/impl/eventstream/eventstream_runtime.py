@@ -2,6 +2,7 @@ import atexit
 import os
 import tempfile
 import threading
+import traceback
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable
