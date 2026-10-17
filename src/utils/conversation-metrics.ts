@@ -5,6 +5,21 @@ import type {
   TokenUsage,
 } from "#/api/conversation-service/agent-server-conversation-service.types";
 
+interface CombinableTokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  context_window: number;
+  per_turn_token: number;
+}
+
+interface CombinableMetrics {
+  accumulated_cost: number;
+  max_budget_per_task: number | null;
+  accumulated_token_usage?: CombinableTokenUsage | null;
+}
+
 /**
  * TypeScript equivalent of the get_combined_metrics method from the Python SDK
  * Combines metrics from all LLM usage IDs in a conversation's stats
@@ -24,8 +39,7 @@ export function combineUsageMetrics(
   let maxBudgetPerTask: number | null = null;
   let combinedTokenUsage: TokenUsage | null = null;
 
-  // Iterate through all metrics and combine them
-  for (const metrics of Object.values(stats.usage_to_metrics)) {
+  for (const metrics of Object.values(usageToMetrics)) {
     // Add up costs
     totalCost += metrics.accumulated_cost;
 
