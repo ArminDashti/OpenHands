@@ -7,11 +7,12 @@ import {
 } from "#/api/backend-registry/active-store";
 import type { Backend } from "#/api/backend-registry/types";
 import { callCloudProxy } from "#/api/cloud/proxy";
-import { buildHttpBaseUrl } from "#/utils/websocket-url";
 import AgentServerConversationService from "#/api/conversation-service/agent-server-conversation-service.api";
+import { buildHttpBaseUrl } from "#/utils/websocket-url";
 
-const { mockCondenseConversation } = vi.hoisted(() => ({
+const { mockCondenseConversation, mockConversationClient } = vi.hoisted(() => ({
   mockCondenseConversation: vi.fn(),
+  mockConversationClient: vi.fn(),
 }));
 
 vi.mock("@openhands/typescript-client/clients", async () => {
@@ -20,9 +21,11 @@ vi.mock("@openhands/typescript-client/clients", async () => {
   >("@openhands/typescript-client/clients");
   return {
     ...actual,
-    ConversationClient: vi.fn(function ConversationClientMock() {
+    ConversationClient: mockConversationClient.mockImplementation(
+      function ConversationClientMock() {
       return { condenseConversation: mockCondenseConversation };
-    }),
+      },
+    ),
   };
 });
 
@@ -52,6 +55,7 @@ describe("AgentServerConversationService.condenseConversation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCondenseConversation.mockReset().mockResolvedValue(undefined);
+    mockConversationClient.mockClear();
     vi.mocked(callCloudProxy).mockReset().mockResolvedValue(undefined);
     window.localStorage.clear();
     __resetActiveStoreForTests();
@@ -117,5 +121,6 @@ describe("AgentServerConversationService.condenseConversation", () => {
       }),
     );
     expect(callCloudProxy).not.toHaveBeenCalled();
+    expect(mockCondenseConversation).toHaveBeenCalledWith("conv-1");
   });
 });
