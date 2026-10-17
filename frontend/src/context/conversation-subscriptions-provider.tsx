@@ -14,6 +14,7 @@ import {
   isStatusUpdate,
 } from "#/types/core/guards";
 import { AgentState } from "#/types/agent-state";
+import EventLogger from "#/utils/event-logger";
 import {
   renderConversationErroredToast,
   renderConversationCreatedToast,
