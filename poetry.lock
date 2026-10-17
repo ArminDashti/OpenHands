@@ -4015,6 +4015,7 @@ files = [
     {file = "pulsar_client-3.4.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:b49d669bed15b7edb9c936704310d57808f1d01c511b94d866f54fe8ffe1752d"},
     {file = "pulsar_client-3.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:88c93e5fbfc349f3967e931f7a908d15fd4fd725ebdd842423ac9cd961fe293f"},
 ]
+markers = {runtime = "sys_platform != \"win32\" and sys_platform != \"emscripten\" or os_name != \"nt\""}
 
 [package.dependencies]
 certifi = "*"
