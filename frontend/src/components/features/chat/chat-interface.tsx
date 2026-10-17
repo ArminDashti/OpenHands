@@ -1,4 +1,3 @@
-import { useDispatch, useSelector } from "react-redux";
 import React from "react";
 import posthog from "posthog-js";
 import { convertImageToBase64 } from "#/utils/convert-image-to-base-64";
@@ -31,13 +30,14 @@ function getEntryPoint(
 
 export function ChatInterface() {
   const { send, isLoadingMessages } = useWsClient();
-  const dispatch = useDispatch();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const { scrollDomToBottom, onChatBodyScroll, hitBottom } =
     useScrollToBottom(scrollRef);
 
-  const { messages } = useSelector((state: RootState) => state.chat);
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  // Use the chat context instead of Redux
+  const { messages, addUserMessage } = useChatContext();
+  // Use the agent state context instead of Redux
+  const { curAgentState } = useAgentStateContext();
 
   // Trigger auto-scroll when new messages arrive or agent state changes
   React.useEffect(() => {
@@ -76,7 +76,8 @@ export function ChatInterface() {
 
     const timestamp = new Date().toISOString();
     const pending = true;
-    dispatch(addUserMessage({ content, imageUrls, timestamp, pending }));
+    // Use the context function instead of dispatching to Redux
+    addUserMessage({ content, imageUrls, timestamp, pending });
     send(createChatMessage(content, imageUrls, timestamp));
     setMessageToSend(null);
   };

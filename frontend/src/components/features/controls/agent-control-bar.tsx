@@ -10,7 +10,10 @@ import { ActionButton } from "#/components/shared/buttons/action-button";
 
 export function AgentControlBar() {
   const { send } = useWsClient();
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  // Use the agent state context
+  const agentStateContext = useAgentStateContext();
+
+  const { curAgentState } = agentStateContext;
 
   const handleAction = (action: AgentState) => {
     if (!IGNORE_TASK_STATE_MAP[action].includes(curAgentState)) {

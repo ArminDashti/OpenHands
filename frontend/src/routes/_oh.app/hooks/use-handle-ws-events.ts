@@ -24,7 +24,6 @@ export const useHandleWSEvents = () => {
   const { events, send } = useWsClient();
   const { setToken } = useAuth();
   const endSession = useEndSession();
-  const dispatch = useDispatch();
 
   React.useEffect(() => {
     if (!events.length) {
@@ -60,12 +59,10 @@ export const useHandleWSEvents = () => {
     }
 
     if (isErrorObservation(event)) {
-      dispatch(
-        addErrorMessage({
-          id: event.extras?.error_id,
-          message: event.message,
-        }),
-      );
+      addErrorMessage({
+        id: event.extras?.error_id,
+        message: event.message,
+      });
     }
   }, [events.length]);
 };
