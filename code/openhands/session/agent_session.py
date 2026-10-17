@@ -38,7 +38,7 @@ from openhands.security import SecurityAnalyzer, options
 from openhands.server.services.conversation_stats import ConversationStats
 from openhands.storage.data_models.user_secrets import UserSecrets
 from openhands.storage.files import FileStore
-from openhands.utils.async_utils import EXECUTOR, call_sync_from_async
+from openhands.utils.async_utils import call_sync_from_async
 from openhands.utils.shutdown_listener import should_continue
 
 WAIT_TIME_BEFORE_CLOSE = 90
@@ -258,7 +258,7 @@ class AgentSession:
             self.controller.save_state()
             await self.controller.close()
         if self.runtime is not None:
-            EXECUTOR.submit(self.runtime.close)
+            self.runtime.close()
         if self.security_analyzer is not None:
             await self.security_analyzer.close()
 
