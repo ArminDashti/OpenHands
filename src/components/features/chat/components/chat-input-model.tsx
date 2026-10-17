@@ -8,6 +8,7 @@ import { ComboboxCaretInline } from "#/ui/combobox-caret";
 import SettingsGearIcon from "#/icons/settings-gear.svg?react";
 import CheckIcon from "#/icons/checkmark.svg?react";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
+import { useAvailablePopoverSpace } from "#/hooks/use-available-popover-space";
 import { NavigationLink } from "#/components/shared/navigation-link";
 import { ContextMenu } from "#/ui/context-menu";
 import { ContextMenuListItem } from "#/components/features/context-menu/context-menu-list-item";
@@ -147,6 +148,12 @@ export function ChatInputModel() {
     () => setIsPopoverOpen(false),
     triggerRef,
   );
+  // The popover opens upward; cap its height to the space actually visible
+  // above the trigger so the first models aren't clipped off-screen.
+  const maxHeight = useAvailablePopoverSpace(triggerRef, {
+    open: isPopoverOpen,
+    direction: "up",
+  });
 
   if (!model.displayModel) {
     return null;

@@ -5,6 +5,7 @@ import { ComboboxCaretInline } from "#/ui/combobox-caret";
 import SettingsGearIcon from "#/icons/settings-gear.svg?react";
 import CheckIcon from "#/icons/checkmark.svg?react";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
+import { useAvailablePopoverSpace } from "#/hooks/use-available-popover-space";
 import { NavigationLink } from "#/components/shared/navigation-link";
 import { ContextMenu } from "#/ui/context-menu";
 import { ContextMenuListItem } from "#/components/features/context-menu/context-menu-list-item";
@@ -185,6 +186,10 @@ export function ChatInputLlmProfilePicker() {
     () => setIsPopoverOpen(false),
     triggerRef,
   );
+  const maxHeight = useAvailablePopoverSpace(triggerRef, {
+    open: isPopoverOpen,
+    direction: "up",
+  });
 
   React.useLayoutEffect(() => {
     if (!isPopoverOpen) return undefined;
