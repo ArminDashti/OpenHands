@@ -41,6 +41,10 @@ def test_ps1_metadata_json_structure():
     }
     assert set(data.keys()) == expected_fields
 
+    # Check that shell variables are present
+    assert data['username'] == r'\u'
+    assert data['hostname'] == r'\h'
+
 
 def test_ps1_metadata_parsing():
     """Test parsing PS1 output into CmdOutputMetadata"""
@@ -306,6 +310,24 @@ def test_cmd_output_observation_properties():
     assert obs.to_llm_content[0].text == TerminalObservation.ERROR_MESSAGE_HEADER
     assert isinstance(obs.to_llm_content[1], TextContent)
     assert "Command failed" in obs.to_llm_content[1].text
+
+
+def test_ps1_metadata_no_double_escaping():
+    """Test that PS1 metadata JSON doesn't have doubly escaped quotes.
+    This test specifically checks for the issue where quotes were being
+    doubly escaped, causing JSON parsing to fail."""
+    prompt = CmdOutputMetadata.to_ps1_prompt()
+    # Extract the JSON part
+    json_str = prompt.replace('###PS1JSON###\n', '').replace('\n###PS1END###\n', '')
+
+    # The JSON string should be valid JSON without any escaping needed
+    data = json.loads(json_str)
+    assert isinstance(data, dict)
+    assert 'pid' in data
+    assert 'exit_code' in data
+
+    # The shell command should still have its quotes properly escaped
+    assert data['py_interpreter_path'].endswith('"")')
 
 
 def test_ps1_metadata_empty_fields():
