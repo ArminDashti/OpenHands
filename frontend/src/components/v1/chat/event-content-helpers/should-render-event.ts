@@ -1,4 +1,5 @@
 import { OpenHandsEvent } from "#/types/v1/core";
+import { MessageEvent } from "#/types/v1/core/events/message-event";
 import {
   isActionEvent,
   isObservationEvent,
@@ -19,9 +20,12 @@ const NO_RENDER_OBSERVATION_TYPES = [
 ];
 
 export const shouldRenderEvent = (event: OpenHandsEvent) => {
-  // Explicitly exclude system events that should not be rendered in chat
   if (isConversationStateUpdateEvent(event)) {
-    return false;
+    // A finished `/goal` loop renders inline so it settles into the
+    // conversation; the live (active) banner is shown separately by
+    // GoalStatusBanner, and all other state updates (and the in-progress goal
+    // events) stay hidden.
+    return isGoalConversationStateUpdateEvent(event) && !event.value.active;
   }
 
   // Render action events (with filtering)
@@ -48,9 +52,11 @@ export const shouldRenderEvent = (event: OpenHandsEvent) => {
     return !NO_RENDER_OBSERVATION_TYPES.includes(observationType);
   }
 
-  // Render message events (user and assistant messages)
+  // Render message events (user and assistant messages), except the goal loop's
+  // injected re-prompts — the judge feedback they carry is shown in the goal
+  // banner, so otherwise they leak into the chat as fake user turns.
   if (isMessageEvent(event)) {
-    return true;
+    return !isGoalLoopReprompt(event);
   }
 
   // Render agent error events

@@ -69,6 +69,16 @@ export function EventMessage({
     feedbackData,
   };
 
+  // Finished `/goal` loop: render the terminal status inline so it settles into
+  // the conversation. should-render-event.ts only lets the terminal (inactive)
+  // goal event through; the active loop is shown by the bottom GoalStatusBanner.
+  if (
+    isConversationStateUpdateEvent(event) &&
+    isGoalConversationStateUpdateEvent(event)
+  ) {
+    return <GoalStatusContent status={event.value} />;
+  }
+
   // Agent error events
   if (isAgentErrorEvent(event)) {
     return <ErrorEventMessage event={event} {...commonProps} />;
