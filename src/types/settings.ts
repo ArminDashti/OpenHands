@@ -124,6 +124,18 @@ export type MarketplaceWithScope = MarketplaceRegistration & {
   scope: "instance" | "org" | "personal";
 };
 
+// UI representation of a marketplace that may exist at multiple scopes
+export type MarketplaceDisplay = {
+  name: string;
+  source: string;
+  ref?: string;
+  repo_path?: string;
+  auto_load?: boolean;
+  scopes: ("instance" | "org" | "personal")[];
+  // Map of scope -> registration for accessing scope-specific data
+  registrations: Map<"instance" | "org" | "personal", MarketplaceRegistration>;
+};
+
 export interface SkillWithState extends SkillInfo {
   id: string;
   repository: string;
