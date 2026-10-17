@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 import time
 
@@ -21,6 +22,7 @@ from evaluation.utils.shared import (
 )
 from openhands.core.config import (
     AppConfig,
+    LLMConfig,
     SandboxConfig,
     get_parser,
 )
