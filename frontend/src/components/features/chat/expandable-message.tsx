@@ -29,11 +29,24 @@ export function ExpandableMessage({
 
   useEffect(() => {
     if (id && i18n.exists(id)) {
-      setHeadline(t(id));
+      // Only show the headline if the action hasn't been executed yet (success is undefined)
+      if (success === undefined) {
+        setHeadline(t(id));
+        setDetails("");
+        setShowDetails(false);
+      } else {
+        // Only show the details if the action has been executed
+        setHeadline("");
+        setDetails(message);
+        setShowDetails(true);
+      }
+    } else {
+      // If no translation ID is provided, just show the message
+      setHeadline("");
       setDetails(message);
-      setShowDetails(false);
+      setShowDetails(true);
     }
-  }, [id, message, i18n.language]);
+  }, [id, message, success, i18n.language, t]);
 
   const arrowClasses = "h-4 w-4 ml-2 inline fill-neutral-300";
   const statusIconClasses = "h-4 w-4 ml-2 inline";
@@ -56,19 +69,6 @@ export function ExpandableMessage({
               )}
             </button>
           </p>
-        )}
-        {showDetails && (
-          <Markdown
-            className="text-sm overflow-auto"
-            components={{
-              code,
-              ul,
-              ol,
-            }}
-            remarkPlugins={[remarkGfm]}
-          >
-            {details}
-          </Markdown>
         )}
       </div>
       {type === "action" && success !== undefined && (
