@@ -5,9 +5,9 @@ import asyncio
 import multiprocessing as mp
 import os
 import pathlib
-import subprocess
 from typing import Any, Awaitable, TextIO
 
+import aiofiles
 from pydantic import SecretStr
 from tqdm import tqdm
 
@@ -36,7 +36,9 @@ def cleanup() -> None:
 
 # This function tracks the progress AND write the output to a JSONL file
 async def update_progress(
-    output: Awaitable[ResolverOutput], output_fp: TextIO, pbar: tqdm
+    output: Awaitable[ResolverOutput],
+    output_fp: TextIO | aiofiles.threadpool.text.AsyncTextIOWrapper,
+    pbar: tqdm,
 ) -> None:
     resolved_output = await output
     pbar.update(1)
@@ -111,23 +113,30 @@ async def resolve_issues(
     # checkout the repo
     repo_dir = os.path.join(output_dir, 'repo')
     if not os.path.exists(repo_dir):
-        checkout_output = subprocess.check_output(
-            [
-                'git',
-                'clone',
-                issue_handler.get_clone_url(),
-                f'{output_dir}/repo',
-            ]
-        ).decode('utf-8')
+        process = await asyncio.create_subprocess_exec(
+            'git',
+            'clone',
+            issue_handler.get_clone_url(),
+            f'{output_dir}/repo',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        checkout_output = stdout.decode('utf-8') if stdout else stderr.decode('utf-8')
         if 'fatal' in checkout_output:
             raise RuntimeError(f'Failed to clone repository: {checkout_output}')
 
     # get the commit id of current repo for reproducibility
-    base_commit = (
-        subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)
-        .decode('utf-8')
-        .strip()
+    process = await asyncio.create_subprocess_exec(
+        'git',
+        'rev-parse',
+        'HEAD',
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=repo_dir,
     )
+    stdout, _ = await process.communicate()
+    base_commit = stdout.decode('utf-8').strip()
     logger.info(f'Base commit: {base_commit}')
 
     if repo_instruction is None:
@@ -142,14 +151,14 @@ async def resolve_issues(
     logger.info(f'Writing output to {output_file}')
     finished_numbers = set()
     if os.path.exists(output_file):
-        with open(output_file, 'r') as f:
-            for line in f:
+        async with aiofiles.open(output_file, 'r') as f:
+            async for line in f:
                 data = ResolverOutput.model_validate_json(line)
                 finished_numbers.add(data.issue.number)
         logger.warning(
             f'Output file {output_file} already exists. Loaded {len(finished_numbers)} finished issues.'
         )
-    output_fp = open(output_file, 'a')
+    output_fp = await aiofiles.open(output_file, 'a')
 
     logger.info(
         f'Resolving issues with model {model_name}, max iterations {max_iterations}.'
@@ -182,16 +191,26 @@ async def resolve_issues(
                     f'Checking out to PR branch {issue.head_branch} for issue {issue.number}'
                 )
 
-                subprocess.check_output(
-                    ['git', 'checkout', f'{issue.head_branch}'],
+                process = await asyncio.create_subprocess_exec(
+                    'git',
+                    'checkout',
+                    f'{issue.head_branch}',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
                     cwd=repo_dir,
                 )
+                await process.communicate()
 
-                base_commit = (
-                    subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)
-                    .decode('utf-8')
-                    .strip()
+                process = await asyncio.create_subprocess_exec(
+                    'git',
+                    'rev-parse',
+                    'HEAD',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=repo_dir,
                 )
+                stdout, _ = await process.communicate()
+                base_commit = stdout.decode('utf-8').strip()
 
             task = update_progress(
                 process_issue(
@@ -225,7 +244,7 @@ async def resolve_issues(
         print('KeyboardInterrupt received. Cleaning up...')
         cleanup()
 
-    output_fp.close()
+    await output_fp.close()
     logger.info('Finished.')
 
 

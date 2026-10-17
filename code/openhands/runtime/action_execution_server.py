@@ -494,18 +494,18 @@ class ActionExecutor:
         else:
             file_stat = None
 
-        mode = 'w' if not file_exists else 'r+'
+        mode: Literal['r+', 'w'] = 'w' if not file_exists else 'r+'
         try:
             with open(filepath, mode, encoding='utf-8') as file:  # noqa: ASYNC101
                 if mode != 'w':
-                    all_lines = file.readlines()
+                    all_lines = await file.readlines()
                     new_file = insert_lines(insert, all_lines, action.start, action.end)
                 else:
                     new_file = [i + '\n' for i in insert]
 
-                file.seek(0)
-                file.writelines(new_file)
-                file.truncate()
+                await file.seek(0)
+                await file.writelines(new_file)
+                await file.truncate()
 
         except FileNotFoundError:
             return ErrorObservation(f'File not found: {filepath}')
