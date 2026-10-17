@@ -87,10 +87,32 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                 ) from e
 
             # ================================================
-            # CmdRunTool (Bash)
+            # BashTool (Unified)
             # ================================================
+            if tool_call.function.name == EXECUTE_BASH_TOOL_NAME:
+                # Use unified tool validation
+                bash_tool = _TOOL_INSTANCES[EXECUTE_BASH_TOOL_NAME]
+                validated_args = bash_tool.validate_parameters(arguments)
 
-            if tool_call.function.name == create_cmd_run_tool()['function']['name']:
+                # convert is_input to boolean
+                is_input = validated_args.get('is_input', 'false') == 'true'
+                action = CmdRunAction(
+                    command=validated_args['command'], is_input=is_input
+                )
+
+                # Set hard timeout if provided
+                if 'timeout' in validated_args:
+                    try:
+                        action.set_hard_timeout(float(validated_args['timeout']))
+                    except ValueError as e:
+                        raise FunctionCallValidationError(
+                            f"Invalid float passed to 'timeout' argument: {validated_args['timeout']}"
+                        ) from e
+
+            # ================================================
+            # CmdRunTool (Legacy - fallback)
+            # ================================================
+            elif tool_call.function.name == create_cmd_run_tool()['function']['name']:
                 if 'command' not in arguments:
                     raise FunctionCallValidationError(
                         f'Missing required argument "command" in tool call {tool_call.function.name}'
@@ -115,9 +137,22 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                 )
 
             # ================================================
-            # AgentFinishAction
+            # FinishTool (Unified)
             # ================================================
-            elif tool_call.function.name == FinishTool['function']['name']:
+            elif tool_call.function.name == FINISH_TOOL_NAME:
+                # Use unified tool validation
+                finish_tool = _TOOL_INSTANCES[FINISH_TOOL_NAME]
+                validated_args = finish_tool.validate_parameters(arguments)
+
+                action = AgentFinishAction(
+                    final_thought=validated_args.get('summary', ''),
+                    task_completed=validated_args.get('task_completed', None),
+                )
+
+            # ================================================
+            # AgentFinishAction (Legacy - fallback)
+            # ================================================
+            elif tool_call.function.name == LegacyFinishTool['function']['name']:
                 action = AgentFinishAction(
                     final_thought=arguments.get('message', ''),
                     task_completed=arguments.get('task_completed', None),
@@ -141,6 +176,42 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                     start=arguments.get('start', 1),
                     end=arguments.get('end', -1),
                 )
+
+            # ================================================
+            # FileEditorTool (Unified)
+            # ================================================
+            elif tool_call.function.name == STR_REPLACE_EDITOR_TOOL_NAME:
+                # Use unified tool validation
+                file_editor_tool = _TOOL_INSTANCES[STR_REPLACE_EDITOR_TOOL_NAME]
+                validated_args = file_editor_tool.validate_parameters(arguments)
+
+                path = validated_args['path']
+                command = validated_args['command']
+
+                if command == 'view':
+                    action = FileReadAction(
+                        path=path,
+                        impl_source=FileReadSource.OH_ACI,
+                        view_range=validated_args.get('view_range', None),
+                    )
+                else:
+                    # Remove view_range for edit commands
+                    edit_kwargs = {
+                        k: v
+                        for k, v in validated_args.items()
+                        if k not in ['command', 'path', 'view_range']
+                    }
+
+                    action = FileEditAction(
+                        path=path,
+                        command=command,
+                        impl_source=FileEditSource.OH_ACI,
+                        **edit_kwargs,
+                    )
+
+            # ================================================
+            # str_replace_editor (Legacy - fallback)
+            # ================================================
             elif (
                 tool_call.function.name
                 == create_str_replace_editor_tool()['function']['name']
@@ -184,7 +255,17 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
             # ================================================
             # BrowserTool
             # ================================================
-            elif tool_call.function.name == BrowserTool['function']['name']:
+            elif tool_call.function.name == BROWSER_TOOL_NAME:
+                # Use unified tool validation
+                browser_tool = _TOOL_INSTANCES[BROWSER_TOOL_NAME]
+                validated_args = browser_tool.validate_parameters(arguments)
+
+                action = BrowseInteractiveAction(browser_actions=validated_args['code'])
+
+            # ================================================
+            # BrowserTool (Legacy - fallback)
+            # ================================================
+            elif tool_call.function.name == LegacyBrowserTool['function']['name']:
                 if 'code' not in arguments:
                     raise FunctionCallValidationError(
                         f'Missing required argument "code" in tool call {tool_call.function.name}'
