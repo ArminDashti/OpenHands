@@ -591,7 +591,7 @@ describe("Manage Org Route", () => {
 
       const orgName = screen.getByTestId("org-name");
       await waitFor(() =>
-        expect(orgName).toHaveTextContent("Personal Workspace"),
+        expect(orgName).toHaveTextContent("My Workspace"),
       );
 
       expect(

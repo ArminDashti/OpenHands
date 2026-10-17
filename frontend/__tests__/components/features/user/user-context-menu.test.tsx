@@ -522,9 +522,9 @@ describe("UserContextMenu", () => {
     expect(orgSelector).toBeInTheDocument();
 
     // Wait for organizations to load (indicated by org name appearing in the dropdown)
-    // INITIAL_MOCK_ORGS[0] is a personal org, so it displays "Personal Workspace"
+    // INITIAL_MOCK_ORGS[0] is a personal org, so it displays "My Workspace"
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toHaveValue("Personal Workspace");
+      expect(screen.getByRole("combobox")).toHaveValue("My Workspace");
     });
 
     // Open the dropdown by clicking the trigger

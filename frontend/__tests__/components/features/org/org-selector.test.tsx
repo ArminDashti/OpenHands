@@ -67,7 +67,7 @@ describe("OrgSelector", () => {
     // The combobox input should show the first org name
     await waitFor(() => {
       const input = screen.getByRole("combobox");
-      expect(input).toHaveValue("Personal Workspace");
+      expect(input).toHaveValue("My Workspace");
     });
   });
 
@@ -84,7 +84,7 @@ describe("OrgSelector", () => {
     // Wait for the selector to be populated with the first organization
     await waitFor(() => {
       const input = screen.getByRole("combobox");
-      expect(input).toHaveValue("Personal Workspace");
+      expect(input).toHaveValue("My Workspace");
     });
 
     // Click the trigger to open dropdown
@@ -96,7 +96,7 @@ describe("OrgSelector", () => {
     const options = within(listbox).getAllByRole("option");
 
     expect(options).toHaveLength(3);
-    expect(options[0]).toHaveTextContent("Personal Workspace");
+    expect(options[0]).toHaveTextContent("My Workspace");
     expect(options[1]).toHaveTextContent("Acme Corp");
     expect(options[2]).toHaveTextContent("Test Organization");
   });
@@ -115,7 +115,7 @@ describe("OrgSelector", () => {
     renderOrgSelector();
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toHaveValue("Personal Workspace");
+      expect(screen.getByRole("combobox")).toHaveValue("My Workspace");
     });
 
     // Act
@@ -143,7 +143,7 @@ describe("OrgSelector", () => {
     renderOrgSelector();
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toHaveValue("Personal Workspace");
+      expect(screen.getByRole("combobox")).toHaveValue("My Workspace");
     });
 
     // Act
