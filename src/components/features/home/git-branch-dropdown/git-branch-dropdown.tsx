@@ -223,6 +223,7 @@ export function GitBranchDropdown({
             isOpen={isOpen}
             disabled={disabled || !repository}
             getToggleButtonProps={getToggleButtonProps}
+            iconClassName="w-10 h-10"
           />
         </div>
       </div>

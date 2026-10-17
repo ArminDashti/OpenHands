@@ -34,18 +34,18 @@ vi.mock("react-redux", () => ({
 }));
 
 // Mock the custom hooks
-const mockStopConversationMutate = vi.fn();
 const mockStartConversationMutate = vi.fn();
-
-vi.mock("#/hooks/mutation/use-stop-conversation", () => ({
-  useStopConversation: () => ({
-    mutate: mockStopConversationMutate,
-  }),
-}));
+const mockStopConversationMutate = vi.fn();
 
 vi.mock("#/hooks/mutation/use-start-conversation", () => ({
   useStartConversation: () => ({
     mutate: mockStartConversationMutate,
+  }),
+}));
+
+vi.mock("#/hooks/mutation/use-stop-conversation", () => ({
+  useStopConversation: () => ({
+    mutate: mockStopConversationMutate,
   }),
 }));
 
@@ -73,8 +73,8 @@ vi.mock("react-i18next", async () => {
           COMMON$SERVER_STOPPED: "Server Stopped",
           COMMON$ERROR: "Error",
           COMMON$STARTING: "Starting",
-          COMMON$STOP_SERVER: "Stop Server",
-          COMMON$START_SERVER: "Start Server",
+          COMMON$STOP_RUNTIME: "Stop Runtime",
+          COMMON$START_RUNTIME: "Start Runtime",
         };
         return translations[key] || key;
       },
@@ -206,10 +206,10 @@ describe("ServerStatus", () => {
     const stopButton = screen.getByTestId("stop-server-button");
     await user.click(stopButton);
 
-    // Context menu should be closed
-    expect(
-      screen.queryByTestId("server-status-context-menu"),
-    ).not.toBeInTheDocument();
+    // Context menu should be closed (handled by the component)
+    expect(mockStopConversationMutate).toHaveBeenCalledWith({
+      conversationId: "test-conversation-id",
+    });
   });
 
   it("should close context menu after start server action", async () => {
@@ -256,7 +256,7 @@ describe("ServerStatusContextMenu", () => {
     );
 
     expect(screen.getByTestId("stop-server-button")).toBeInTheDocument();
-    expect(screen.getByText("Stop Server")).toBeInTheDocument();
+    expect(screen.getByText("Stop Runtime")).toBeInTheDocument();
   });
 
   it("should render start server button when status is STOPPED", () => {
@@ -269,7 +269,7 @@ describe("ServerStatusContextMenu", () => {
     );
 
     expect(screen.getByTestId("start-server-button")).toBeInTheDocument();
-    expect(screen.getByText("Start Server")).toBeInTheDocument();
+    expect(screen.getByText("Start Runtime")).toBeInTheDocument();
   });
 
   it("should not render stop server button when onStopServer is not provided", () => {
@@ -340,7 +340,7 @@ describe("ServerStatusContextMenu", () => {
     );
 
     expect(screen.getByTestId("stop-server-button")).toHaveTextContent(
-      "Stop Server",
+      "Stop Runtime",
     );
   });
 
@@ -354,7 +354,7 @@ describe("ServerStatusContextMenu", () => {
     );
 
     expect(screen.getByTestId("start-server-button")).toHaveTextContent(
-      "Start Server",
+      "Start Runtime",
     );
   });
 

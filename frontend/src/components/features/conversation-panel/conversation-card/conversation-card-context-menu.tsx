@@ -1,8 +1,7 @@
-import { useTranslation } from "react-i18next";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
-import { cn } from "#/utils/utils";
-import { ContextMenu } from "../../context-menu/context-menu";
+import { ContextMenu } from "#/ui/context-menu";
 import { ContextMenuListItem } from "../../context-menu/context-menu-list-item";
 import { I18nKey } from "#/i18n/declaration";
 import { ConversationNameContextMenuIconText } from "../../conversation/conversation-name-context-menu-icon-text";
@@ -14,6 +13,7 @@ import DownloadIcon from "#/icons/u-download.svg?react";
 import CreditCardIcon from "#/icons/u-credit-card.svg?react";
 import CloseIcon from "#/icons/u-close.svg?react";
 import DeleteIcon from "#/icons/u-delete.svg?react";
+import { Divider } from "#/ui/divider";
 
 interface ConversationCardContextMenuProps {
   onClose: () => void;
@@ -47,10 +47,14 @@ export function ConversationCardContextMenu({
   const generateSection = useCallback(
     (items: React.ReactNode[], isLast?: boolean) => {
       const filteredItems = items.filter((i) => i != null);
-      const divider = <div className="border-b-1 border-[#A3A3A3]" />;
 
       if (filteredItems.length > 0) {
-        return !isLast ? [...filteredItems, divider] : filteredItems;
+        return !isLast
+          ? [
+              ...filteredItems,
+              <Divider key="conversation-card-context-menu-divider" />,
+            ]
+          : filteredItems;
       }
       return [];
     },
@@ -61,12 +65,9 @@ export function ConversationCardContextMenu({
     <ContextMenu
       ref={ref}
       testId="context-menu"
-      className={cn(
-        "right-0 absolute mt-2 p-1",
-        "flex flex-col gap-1",
-        position === "top" && "bottom-full",
-        position === "bottom" && "top-full",
-      )}
+      position={position}
+      alignment="right"
+      className="mt-0"
     >
       {generateSection([
         onEdit && (

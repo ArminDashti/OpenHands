@@ -7,10 +7,10 @@ import { ConversationStatus } from "#/types/conversation-status";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
 import { ServerStatusContextMenu } from "./server-status-context-menu";
-import { useStopConversation } from "#/hooks/mutation/use-stop-conversation";
 import { useStartConversation } from "#/hooks/mutation/use-start-conversation";
 import { useConversationId } from "#/hooks/use-conversation-id";
 import { useUserProviders } from "#/hooks/use-user-providers";
+import { useStopConversation } from "#/hooks/mutation/use-stop-conversation";
 
 export interface ServerStatusProps {
   className?: string;
@@ -24,9 +24,7 @@ export function ServerStatus({
   const [showContextMenu, setShowContextMenu] = useState(false);
 
   const { curAgentState } = useSelector((state: RootState) => state.agent);
-
   const { t } = useTranslation();
-
   const { conversationId } = useConversationId();
 
   // Mutation hooks

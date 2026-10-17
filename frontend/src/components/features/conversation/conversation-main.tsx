@@ -1,58 +1,21 @@
-import { useEffect, useState, Suspense } from "react";
 import { useSelector } from "react-redux";
+import { useWindowSize } from "@uidotdev/usehooks";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChatInterface } from "../chat/chat-interface";
 import { ConversationTabContent } from "./conversation-tabs/conversation-tab-content";
-import {
-  Orientation,
-  ResizablePanel,
-} from "#/components/layout/resizable-panel";
 import { cn } from "#/utils/utils";
 import { RootState } from "#/store";
-import Terminal from "../terminal/terminal";
-import { useConversationTabs } from "./conversation-tabs/use-conversation-tabs";
-
-interface ChatInterfaceWrapperProps {
-  isRightPanelShown: boolean;
-}
-
-export function ChatInterfaceWrapper({
-  isRightPanelShown,
-}: ChatInterfaceWrapperProps) {
-  if (!isRightPanelShown) {
-    return (
-      <div className="flex justify-center w-full h-full">
-        <div className="max-w-[768px]">
-          <ChatInterface />
-        </div>
-      </div>
-    );
-  }
-
-  return <ChatInterface />;
-}
 
 export function ConversationMain() {
-  const [width, setWidth] = useState(window.innerWidth);
-  const [{ terminalOpen }] = useConversationTabs();
-
-  function handleResize() {
-    setWidth(window.innerWidth);
-  }
-
-  useEffect(() => {
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
+  const { width } = useWindowSize();
   const isRightPanelShown = useSelector(
     (state: RootState) => state.conversation.isRightPanelShown,
   );
+  const isMobile = width && width <= 1024;
 
-  if (width <= 1024) {
+  if (isMobile) {
     return (
-      <div className="flex flex-col gap-3 overflow-auto w-full">
+      <div className="flex flex-col gap-3 w-full overflow-x-hidden">
         <div
           className={cn(
             "overflow-hidden w-full bg-base min-h-[494px]",
@@ -61,49 +24,73 @@ export function ConversationMain() {
         >
           <ChatInterface />
         </div>
-        {isRightPanelShown && (
-          <div className="h-full w-full min-h-[494px] flex flex-col gap-3">
-            <ConversationTabContent />
-            {terminalOpen && (
-              <Suspense fallback={<div className="h-full" />}>
-                <Terminal />
-              </Suspense>
-            )}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {isRightPanelShown && (
+            <motion.div
+              key="mobile-right-panel"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                duration: 0.3,
+              }}
+              className="h-full w-full min-h-[494px] flex flex-col gap-3"
+            >
+              <ConversationTabContent />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
-  if (isRightPanelShown) {
-    return (
-      <ResizablePanel
-        orientation={Orientation.HORIZONTAL}
-        className="grow h-full min-h-0 min-w-0"
-        initialSize={500}
-        firstClassName="overflow-hidden bg-base"
-        secondClassName="flex flex-col overflow-hidden"
-        firstChild={
-          <ChatInterfaceWrapper isRightPanelShown={isRightPanelShown} />
-        }
-        secondChild={
-          <div className="flex flex-col flex-1 gap-3">
-            <ConversationTabContent />
-            {terminalOpen && (
-              <Suspense fallback={<div className="h-full" />}>
-                <Terminal />
-              </Suspense>
-            )}
-          </div>
-        }
-      />
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-3 overflow-auto w-full h-full">
-      <div className="overflow-hidden w-full h-full bg-base">
-        <ChatInterfaceWrapper isRightPanelShown={isRightPanelShown} />
+    <div
+      className={cn(
+        "grid h-full w-full min-h-0 min-w-0 overflow-x-hidden transition-all duration-300 ease-in-out",
+        isRightPanelShown ? "grid-cols-[1fr_1fr]" : "grid-cols-[1fr_0fr]",
+      )}
+    >
+      {/* Left Panel - Chat Interface */}
+      <div className="overflow-hidden bg-base h-full">
+        <div className="flex justify-center w-full h-full">
+          <div
+            className={cn(
+              "w-full h-full",
+              !isRightPanelShown && "max-w-[768px]",
+            )}
+          >
+            <ChatInterface />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Conversation Tabs */}
+      <div className="overflow-hidden h-full">
+        <AnimatePresence>
+          {isRightPanelShown && (
+            <motion.div
+              key="right-panel"
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                duration: 0.3,
+              }}
+              className="w-full h-full flex flex-col overflow-hidden"
+            >
+              <div className="flex flex-col flex-1 gap-3">
+                <ConversationTabContent />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

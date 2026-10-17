@@ -21,6 +21,7 @@ export function UserAvatar({ avatarUrl, isLoading }: UserAvatarProps) {
         "w-8 h-8 rounded-full flex items-center justify-center cursor-pointer",
         isLoading && "bg-transparent",
       )}
+      onClick={onClick}
     >
       {!isLoading && avatarUrl && <Avatar src={avatarUrl} />}
       {!isLoading && !avatarUrl && (
