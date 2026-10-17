@@ -10,9 +10,14 @@ from litellm import (
     ModelResponse,
 )
 
+from openhands.agenthub.codeact_agent.llm_diff_parser import (
+    DiffBlock,
+    parse_llm_response_for_diffs,
+)
 from openhands.agenthub.codeact_agent.tools import (
     BrowserTool,
     IPythonTool,
+    ListDirectoryTool,
     LLMBasedFileEditTool,
     ThinkTool,
     WebReadTool,
@@ -63,19 +68,52 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
     assert len(response.choices) == 1, 'Only one choice is supported for now'
     choice = response.choices[0]
     assistant_msg = choice.message
-    if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
-        # Check if there's assistant_msg.content. If so, add it to the thought
-        thought = ''
-        if isinstance(assistant_msg.content, str):
-            thought = assistant_msg.content
-        elif isinstance(assistant_msg.content, list):
-            for msg in assistant_msg.content:
-                if msg['type'] == 'text':
-                    thought += msg['text']
 
-        # Process each tool call to OpenHands action
+    # 1. Extract message content
+    if isinstance(assistant_msg.content, str):
+        message_content = assistant_msg.content
+    elif isinstance(assistant_msg.content, list):
+        for msg in assistant_msg.content:
+            if msg['type'] == 'text':
+                message_content += msg['text']
+
+    # 2. Try parsing diff blocks if enabled and content exists
+    if is_llm_diff_enabled and message_content:
+        logger.debug('LLM Diff mode enabled, attempting to parse response content.')
+        try:
+            # Call the updated parser, expecting list[DiffBlock]
+            parsed_blocks: list[DiffBlock] = parse_llm_response_for_diffs(
+                message_content
+            )
+
+            if parsed_blocks:  # Check if the list is not empty
+                logger.info(
+                    f'Parsed {len(parsed_blocks)} diff blocks from LLM response.'
+                )
+                # Create FileEditActions from the DiffBlock objects
+                for block in parsed_blocks:
+                    action = FileEditAction(
+                        path=block.filename,
+                        search=block.search,
+                        replace=block.replace,
+                        impl_source=FileEditSource.LLM_DIFF,
+                    )
+                    parsed_llm_diff_actions.append(action)
+
+        except ValueError as e:
+            logger.error(f'Error parsing LLM diff blocks: {e}')
+            diff_parse_error = e  # Store error for potential later use
+        except Exception as e:
+            logger.error(
+                f'Unexpected error during LLM diff parsing: {e}', exc_info=True
+            )
+            diff_parse_error = e  # Store error
+
+    # 3. Process tool calls if they exist
+    tool_calls_exist = hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls
+    if tool_calls_exist:
+        # Process each tool call
         for i, tool_call in enumerate(assistant_msg.tool_calls):
-            action: Action
             logger.debug(f'Tool call in function_calling.py: {tool_call}')
             try:
                 arguments = json.loads(tool_call.function.arguments)
@@ -192,6 +230,39 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                         **other_kwargs,
                     )
             # ================================================
+            # New Utility Tools (Routing to OH_ACI)
+            # ================================================
+            elif tool_call.function.name == ViewFileTool['function']['name']:
+                if 'path' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "path" in tool call {tool_call.function.name}'
+                    )
+                action = FileReadAction(
+                    path=arguments['path'],
+                    impl_source=FileReadSource.OH_ACI,
+                    view_range=arguments.get('view_range', None),
+                )
+            elif tool_call.function.name == ListDirectoryTool['function']['name']:
+                if 'path' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "path" in tool call {tool_call.function.name}'
+                    )
+                action = FileReadAction(
+                    path=arguments['path'],
+                    impl_source=FileReadSource.OH_ACI,
+                    # view_range is not applicable for directories
+                )
+            elif tool_call.function.name == UndoEditTool['function']['name']:
+                if 'path' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "path" in tool call {tool_call.function.name}'
+                    )
+                action = FileEditAction(
+                    path=arguments['path'],
+                    command='undo_edit',
+                    impl_source=FileEditSource.OH_ACI,
+                )
+            # ================================================
             # AgentThinkAction
             # ================================================
             elif tool_call.function.name == ThinkTool['function']['name']:
@@ -230,9 +301,6 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                     f'Tool {tool_call.function.name} is not registered. (arguments: {arguments}). Please check the tool name and retry with an existing tool.'
                 )
 
-            # We only add thought to the first action
-            if i == 0:
-                action = combine_thought(action, thought)
             # Add metadata for tool calling
             action.tool_call_metadata = ToolCallMetadata(
                 tool_call_id=tool_call.id,
@@ -240,20 +308,53 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                 model_response=response,
                 total_calls_in_response=len(assistant_msg.tool_calls),
             )
-            actions.append(action)
-    else:
-        actions.append(
-            MessageAction(
-                content=str(assistant_msg.content) if assistant_msg.content else '',
-                wait_for_response=True,
-            )
-        )
+            tool_call_actions.append(action)
 
-    # Add response id to actions
-    # This will ensure we can match both actions without tool calls (e.g. MessageAction)
-    # and actions with tool calls (e.g. CmdRunAction, IPythonRunCellAction, etc.)
-    # with the token usage data
-    for action in actions:
+    # 4. Combine actions: diffs first (if any), then tool calls (if any)
+    all_actions.extend(parsed_llm_diff_actions)
+    all_actions.extend(tool_call_actions)
+
+    # 5. Handle the case where no actions were generated (neither diffs nor tool calls)
+    if not all_actions:
+        # If there was a diff parsing error, report it (even if no blocks were parsed)
+        if diff_parse_error:
+            all_actions.append(
+                MessageAction(
+                    content=f'[Error parsing diff blocks: {diff_parse_error}]\nOriginal Content:\n{message_content}',
+                    wait_for_response=True,
+                )
+            )
+        # Otherwise, treat as a regular message if content exists
+        elif message_content:
+            all_actions.append(
+                MessageAction(
+                    content=message_content,
+                    wait_for_response=True,
+                )
+            )
+        # If no actions AND no content, add a default Think action
+        else:
+            logger.warning(
+                f'No actions generated and no message content for response: {response.id}'
+            )
+            all_actions.append(
+                AgentThinkAction(
+                    thought='[No actionable content or tool calls found in response]'
+                )
+            )
+
+    # If actions *were* generated, determine and apply thought
+    else:
+        # 6. Determine contextual thought and apply to the first non-AgentThinkAction
+        contextual_thought = message_content.strip() if message_content else None
+        if contextual_thought:
+            for i, action in enumerate(all_actions):
+                if not isinstance(action, AgentThinkAction):
+                    all_actions[i] = combine_thought(action, contextual_thought)
+                    break  # Apply thought only to the first eligible action
+
+    # 7. Add response id to all actions
+    for action in all_actions:
         action.response_id = response.id
 
     assert len(actions) >= 1
