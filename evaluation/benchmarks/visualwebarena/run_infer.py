@@ -3,7 +3,8 @@ import json
 import os
 from typing import Any
 
-import browsergym.visualwebarena  # noqa F401 register visualwebarena tasks as gym environments
+# TODO: Update to work with Browser-Use evaluation environments
+# import browsergym.visualwebarena  # noqa F401 register visualwebarena tasks as gym environments
 import gymnasium as gym
 import pandas as pd
 
@@ -223,9 +224,11 @@ if __name__ == '__main__':
     dataset = pd.DataFrame(
         {
             'instance_id': [
-                id
-                for id in gym.envs.registry.keys()
-                if id.startswith('browsergym/visualwebarena')
+                # TODO: Update to work with Browser-Use evaluation environments
+                # For now, return empty list as we need to implement Browser-Use evaluation
+                # id
+                # for id in gym.envs.registry.keys()
+                # if id.startswith('browsergym/visualwebarena')
             ]
         }
     )
