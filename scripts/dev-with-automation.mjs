@@ -56,6 +56,7 @@ import process from "node:process";
 
 import {
   assertPortsFree,
+  findFreePort,
   buildAgentServerCommand,
   buildSafeDevConfig,
   buildAgentServerEnv,
@@ -1128,6 +1129,8 @@ function startAutomationBackend(config) {
         AUTOMATION_KV_SECRET:
           process.env.AUTOMATION_KV_SECRET || config.sessionApiKey,
         // CORS: allow localhost origins for dev, unless explicitly overridden.
+        // The ingress origin plus the direct frontend origin (vitePort) so the
+        // canvas UI loads through either entry point (see #17546).
         AUTOMATION_CORS_ORIGINS:
           process.env.AUTOMATION_CORS_ORIGINS ||
           buildAutomationCorsOrigins(config),
