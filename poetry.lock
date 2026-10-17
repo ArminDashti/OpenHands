@@ -1386,7 +1386,7 @@ tqdm = ["tqdm"]
 name = "google-auth"
 version = "2.29.0"
 description = "Google Authentication Library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 groups = ["main", "llama-index"]
 files = [
@@ -2162,7 +2162,7 @@ files = [
 name = "kubernetes"
 version = "29.0.0"
 description = "Kubernetes python client"
-optional = false
+optional = true
 python-versions = ">=3.6"
 groups = ["llama-index"]
 files = [
@@ -4497,7 +4497,7 @@ typing-extensions = ">=4.15.0"
 name = "pyasn1"
 version = "0.6.0"
 description = "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)"
-optional = false
+optional = true
 python-versions = ">=3.8"
 groups = ["main", "llama-index"]
 files = [
@@ -4509,7 +4509,7 @@ files = [
 name = "pyasn1-modules"
 version = "0.4.0"
 description = "A collection of ASN.1-based protocols modules"
-optional = false
+optional = true
 python-versions = ">=3.8"
 groups = ["main", "llama-index"]
 files = [
@@ -8419,7 +8419,7 @@ tests = ["hypothesis (>=3.27.0)", "pytest (>=3.2.1,!=3.3.0)"]
 name = "pynacl"
 version = "1.5.0"
 description = "Python binding to the Networking and Cryptography (NaCl) library"
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "PyNaCl-1.5.0-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:401002a4aaa07c9414132aaed7f6836ff98f59277a234704ff66878c2ee4a0d1"},
@@ -8799,7 +8799,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "requests-oauthlib"
 version = "2.0.0"
 description = "OAuthlib authentication support for Requests."
-optional = false
+optional = true
 python-versions = ">=3.4"
 groups = ["main", "llama-index"]
 files = [
@@ -9843,7 +9843,6 @@ files = [
     {file = "typer-0.12.0-py3-none-any.whl", hash = "sha256:0441a0bb8962fb4383b8537ada9f7eb2d0deda0caa2cfe7387cc221290f617e4"},
     {file = "typer-0.12.0.tar.gz", hash = "sha256:900fe786ce2d0ea44653d3c8ee4594a22a496a3104370ded770c992c5e3c542d"},
 ]
-markers = {main = "extra == \"third-party-runtimes\""}
 
 [package.dependencies]
 typer-cli = "0.12.0"
