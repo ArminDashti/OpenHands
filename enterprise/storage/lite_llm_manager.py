@@ -777,7 +777,8 @@ class LiteLlmManager:
         async def wrapper(*args, **kwargs):
             headers = {'x-goog-api-key': LITE_LLM_API_KEY} if LITE_LLM_API_KEY else {}
             async with httpx.AsyncClient(
-                headers={'x-goog-api-key': LITE_LLM_API_KEY}
+                headers={'x-goog-api-key': LITE_LLM_API_KEY},
+                timeout=httpx.Timeout(30.0),
             ) as client:
                 return await internal_fn(client, *args, **kwargs)
 
