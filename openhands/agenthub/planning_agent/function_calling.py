@@ -140,6 +140,9 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                         f'Missing required argument "code" in tool call {tool_call.function.name}'
                     )
                 action = IPythonRunCellAction(code=arguments['code'])
+
+                # Set safety_risk from arguments if provided
+                set_safety_risk_from_arguments(action, arguments)
             elif tool_call.function.name == 'delegate_to_browsing_agent':
                 action = AgentDelegateAction(
                     agent='BrowsingAgent',
@@ -264,6 +267,9 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                         impl_source=FileReadSource.OH_ACI,
                         view_range=other_kwargs.get('view_range', None),
                     )
+
+                    # Set safety_risk from arguments if provided
+                    set_safety_risk_from_arguments(action, arguments)
                 else:
                     if 'view_range' in other_kwargs:
                         other_kwargs.pop('view_range')
@@ -317,6 +323,27 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
                         f'Missing required argument "code" in tool call {tool_call.function.name}'
                     )
                 action = BrowseInteractiveAction(browser_actions=arguments['code'])
+
+                # Set safety_risk from arguments if provided
+                set_safety_risk_from_arguments(action, arguments)
+
+            # ================================================
+            # TaskTrackingAction
+            # ================================================
+            elif tool_call.function.name == TASK_TRACKER_TOOL_NAME:
+                if 'command' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "command" in tool call {tool_call.function.name}'
+                    )
+                if arguments['command'] == 'plan' and 'task_list' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required argument "task_list" for "plan" command in tool call {tool_call.function.name}'
+                    )
+
+                action = TaskTrackingAction(
+                    command=arguments['command'],
+                    task_list=arguments.get('task_list', []),
+                )
 
             # ================================================
             # WebReadTool (simplified browsing)
