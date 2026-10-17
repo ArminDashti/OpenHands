@@ -357,6 +357,10 @@ def response_to_actions(response: ModelResponse) -> list[Action]:
     for action in all_actions:
         action.response_id = response.id
 
+    # Add critic score to the LAST action
+    if isinstance(response, ModelResponseWithCriticScore):
+        actions[-1].critic_score = response.critic_score
+
     assert len(actions) >= 1
     return actions
 
