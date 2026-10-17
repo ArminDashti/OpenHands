@@ -112,6 +112,25 @@ export type SettingsScope = "personal";
  */
 export type AgentKind = "openhands" | "acp";
 
+export type MarketplaceRegistration = {
+  name: string;
+  source: string;
+  ref?: string;
+  repo_path?: string;
+  auto_load?: "all";
+};
+
+export type MarketplaceWithScope = MarketplaceRegistration & {
+  scope: "instance" | "org" | "personal";
+};
+
+export interface SkillWithState extends SkillInfo {
+  id: string;
+  repository: string;
+  isEnabled: boolean;
+  isAutoLoad: boolean;
+}
+
 export type Settings = {
   llm_model: string;
   llm_base_url: string;
