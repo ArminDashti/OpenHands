@@ -59,6 +59,7 @@ import {
 } from "./dev-process-utils.mjs";
 import {
   buildAgentServerAutomationEnv,
+  buildAutomationCorsOrigins,
   buildAutomationCommand,
   buildAutomationCorsOrigins,
   buildAutomationTelemetryEnv,

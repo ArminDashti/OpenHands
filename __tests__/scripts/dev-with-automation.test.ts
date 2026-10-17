@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it, afterEach } from "vitest";
 import {
   buildAgentServerAutomationEnv,
+  buildAutomationCorsOrigins,
   buildAutomationCommand,
   buildAutomationCorsOrigins,
   buildAutomationRuntimeServicesInfo,
@@ -360,6 +361,39 @@ describe("buildAutomationTelemetryEnv", () => {
   });
 });
 
+describe("buildAutomationCorsOrigins", () => {
+  it("allows the configured ingress and frontend origins", () => {
+    const origins = buildAutomationCorsOrigins(
+      { ingressPort: 8000, vitePort: 3101 },
+      {},
+    );
+
+    expect(origins).toBe(
+      "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3101,http://127.0.0.1:3101",
+    );
+  });
+
+  it("follows the auto-allocated frontend port instead of hardcoding 3001", () => {
+    const origins = buildAutomationCorsOrigins(
+      { ingressPort: 8000, vitePort: 3105 },
+      {},
+    );
+
+    expect(origins).toContain("http://localhost:3105");
+    expect(origins).toContain("http://127.0.0.1:3105");
+    expect(origins).not.toContain("3001");
+  });
+
+  it("respects an explicit AUTOMATION_CORS_ORIGINS override", () => {
+    const origins = buildAutomationCorsOrigins(
+      { ingressPort: 8000, vitePort: 3101 },
+      { AUTOMATION_CORS_ORIGINS: "https://custom.example" },
+    );
+
+    expect(origins).toBe("https://custom.example");
+  });
+});
+
 describe("buildConfig", () => {
   const servers: net.Server[] = [];
   const keyDirs: string[] = [];
@@ -402,6 +436,19 @@ describe("buildConfig", () => {
       OH_CANVAS_SAFE_VITE_PORT: "19903",
       ...extra,
     };
+  }
+
+  /** Bind a loopback server to a free port and record it for teardown. */
+  async function bindServer(): Promise<{ server: net.Server; port: number }> {
+    return new Promise((resolve, reject) => {
+      const server = net.createServer();
+      server.on("error", reject);
+      server.listen(0, "127.0.0.1", () => {
+        const { port } = server.address() as net.AddressInfo;
+        servers.push(server);
+        resolve({ server, port });
+      });
+    });
   }
 
   it("builds default config with correct ports", async () => {
@@ -1693,6 +1740,8 @@ describe("dev-with-automation CLI", () => {
     expect(output).toContain("--dynamic");
     expect(output).toContain("--frontend-only");
     expect(output).toContain("--backend-only");
+    expect(output).toContain("--frontend-port");
+    expect(output).toContain("OH_CANVAS_SAFE_VITE_PORT");
     expect(output).toContain("OH_AUTOMATION_GIT_REF");
     expect(output).toContain("OH_AGENT_SERVER_LOCAL_PATH");
     expect(output).toContain("OPENHANDS_AUTOMATION_API_KEY");
