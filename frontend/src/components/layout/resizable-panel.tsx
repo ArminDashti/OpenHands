@@ -65,6 +65,7 @@ export function ResizablePanel({
 
   const [firstSize, setFirstSize] = useState(() => constrainSize(initialSize));
   const [dividerPosition, setDividerPosition] = useState<number | null>(null);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
   const firstRef = useRef<HTMLDivElement>(null);
   const secondRef = useRef<HTMLDivElement>(null);
   const [collapse, setCollapse] = useState<Collapse>(Collapse.SPLIT);
@@ -107,6 +108,7 @@ export function ResizablePanel({
     return () => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
+      setIsResizing(false);
     };
   }, [dividerPosition, firstSize, isHorizontal, constrainSize]);
 
