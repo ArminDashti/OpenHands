@@ -76,7 +76,6 @@ class ActionRequest(BaseModel):
 
 
 ROOT_GID = 0
-
 SESSION_API_KEY = os.environ.get('SESSION_API_KEY')
 api_key_header = APIKeyHeader(name='X-Session-API-Key', auto_error=False)
 
@@ -143,7 +142,6 @@ class ActionExecutor:
     """ActionExecutor is running inside docker sandbox.
     It is responsible for executing actions received from OpenHands backend and producing observations.
     """
-
     def __init__(
         self,
         plugins_to_load: list[Plugin],
@@ -617,12 +615,13 @@ if __name__ == '__main__':
                 raise ValueError(f'Plugin {plugin} not found')
             plugins_to_load.append(ALL_PLUGINS[plugin]())  # type: ignore
 
-    client: ActionExecutor | None = None
+    executor_class = get_action_executor_class(args.executor_class)
+    client: RuntimeExecutor | None = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         global client
-        client = ActionExecutor(
+        client = executor_class(
             plugins_to_load,
             work_dir=args.working_dir,
             username=args.username,
