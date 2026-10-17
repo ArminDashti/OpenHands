@@ -452,20 +452,71 @@ function isFieldVisibleInView(
   return VIEW_PROMINENCES[view].has(field.prominence);
 }
 
+function hasNonDefaultFieldValue(
+  field: SettingsFieldSchema,
+  rawValue: string | boolean,
+): boolean {
+  return (
+    normalizeComparableValue(field, rawValue) !==
+    normalizeComparableValue(field, field.default)
+  );
+}
+
+function getFieldDefaultFormValue(
+  field: SettingsFieldSchema,
+): string | boolean {
+  return normalizeFieldValue(field, field.default);
+}
+
+export function getHiddenSettingsFieldsToReset(
+  schema: SettingsSchema,
+  values: SettingsFormValues,
+  view: SettingsView,
+): SettingsFieldSchema[] {
+  return getSchemaFields(schema).filter((field) => {
+    const isVisible =
+      isFieldVisibleInView(field, view) &&
+      isSettingsFieldVisible(field, values);
+    if (isVisible) {
+      return false;
+    }
+
+    return hasNonDefaultFieldValue(field, values[field.key]);
+  });
+}
+
 export function buildSdkSettingsPayloadForView(
   schema: SettingsSchema,
   values: SettingsFormValues,
   dirty: SettingsDirtyState,
   view: SettingsView,
+  options?: {
+    resetHiddenFields?: boolean;
+  },
 ): SdkSettingsPayload {
-  const payload = buildSdkSettingsPayload(schema, values, dirty) as Record<
-    string,
-    unknown
-  >;
+  const payload: Record<string, unknown> = {};
+  const resetHiddenFields = options?.resetHiddenFields ?? false;
 
+  // Saving from a less-detailed view should only touch fields the user can
+  // actually edit there. Hidden schema-backed fields stay out of the payload
+  // unless the caller explicitly confirms resetting their persisted values.
   for (const field of getSchemaFields(schema)) {
-    if (!isFieldVisibleInView(field, view)) {
-      setDotted(payload, field.key, field.default ?? null);
+    const isVisible =
+      isFieldVisibleInView(field, view) &&
+      isSettingsFieldVisible(field, values);
+
+    if (dirty[field.key] && isVisible) {
+      setDotted(payload, field.key, coerceFieldValue(field, values[field.key]));
+    } else if (
+      resetHiddenFields &&
+      !isVisible &&
+      hasNonDefaultFieldValue(field, values[field.key])
+    ) {
+      setDotted(
+        payload,
+        field.key,
+        coerceFieldValue(field, getFieldDefaultFormValue(field)),
+      );
     }
   }
 
