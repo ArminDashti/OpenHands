@@ -25,7 +25,7 @@ export const useAuthCallback = () => {
       return;
     }
 
-    // Only set login method if authentication was successful
+    // Only process callback if authentication was successful
     if (!isAuthed) {
       return;
     }
@@ -33,6 +33,7 @@ export const useAuthCallback = () => {
     // Check if we have a login_method query parameter
     const searchParams = new URLSearchParams(location.search);
     const loginMethod = searchParams.get("login_method");
+    const returnTo = searchParams.get("returnTo");
 
     // Set the login method if it's valid
     if (loginMethod === LoginMethod.GITHUB || loginMethod === LoginMethod.GITLAB) {

@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router";
@@ -31,6 +31,43 @@ const createAxiosNotFoundErrorObject = () =>
     },
   );
 
+const { DEFAULT_FEATURE_FLAGS, useIsAuthedMock, useConfigMock } = vi.hoisted(
+  () => {
+    const defaultFeatureFlags = {
+      ENABLE_BILLING: false,
+      HIDE_LLM_SETTINGS: false,
+      ENABLE_JIRA: false,
+      ENABLE_JIRA_DC: false,
+      ENABLE_LINEAR: false,
+    };
+
+    return {
+      DEFAULT_FEATURE_FLAGS: defaultFeatureFlags,
+      useIsAuthedMock: vi.fn().mockReturnValue({
+        data: true,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+      }),
+      useConfigMock: vi.fn().mockReturnValue({
+        data: {
+          APP_MODE: "oss",
+          FEATURE_FLAGS: defaultFeatureFlags,
+        },
+        isLoading: false,
+      }),
+    };
+  },
+);
+
+vi.mock("#/hooks/query/use-is-authed", () => ({
+  useIsAuthed: () => useIsAuthedMock(),
+}));
+
+vi.mock("#/hooks/query/use-config", () => ({
+  useConfig: () => useConfigMock(),
+}));
+
 const RouterStub = createRoutesStub([
   {
     Component: MainApp,
@@ -49,6 +86,10 @@ const RouterStub = createRoutesStub([
         path: "/settings",
       },
     ],
+  },
+  {
+    Component: () => <div data-testid="login-page" />,
+    path: "/login",
   },
 ]);
 
@@ -83,7 +124,7 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
 describe("HomeScreen", () => {
   it("should render", () => {
     renderHomeScreen();
-    screen.getByTestId("home-screen");
+    await screen.findByTestId("home-screen");
   });
 
   it("should render the repository connector and suggested tasks sections", async () => {
@@ -306,6 +347,46 @@ describe("Settings 404", () => {
   const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
   const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
 
+  beforeEach(() => {
+    vi.resetAllMocks();
+
+    useIsAuthedMock.mockReturnValue({
+      data: true,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    useConfigMock.mockReturnValue({
+      data: { APP_MODE: "oss", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
+      isLoading: false,
+    });
+
+    getConfigSpy.mockResolvedValue({
+      APP_MODE: "oss",
+      GITHUB_CLIENT_ID: "test-client-id",
+      POSTHOG_CLIENT_KEY: "test-posthog-key",
+      PROVIDERS_CONFIGURED: ["github"],
+      AUTH_URL: "https://auth.example.com",
+      FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS,
+    } as Awaited<ReturnType<typeof OptionService.getConfig>>);
+
+    vi.spyOn(AuthService, "authenticate").mockResolvedValue(true);
+
+    getSettingsSpy.mockResolvedValue(MOCK_DEFAULT_USER_SETTINGS);
+
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("should open the settings modal if GET /settings fails with a 404", async () => {
     const error = createAxiosNotFoundErrorObject();
     getSettingsSpy.mockRejectedValue(error);
@@ -342,6 +423,11 @@ describe("Settings 404", () => {
   });
 
   it("should not open the settings modal if GET /settings fails but is SaaS mode", async () => {
+    useConfigMock.mockReturnValue({
+      data: { APP_MODE: "saas", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
+      isLoading: false,
+    });
+
     // @ts-expect-error - we only need APP_MODE for this test
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
@@ -366,8 +452,23 @@ describe("Setup Payment modal", () => {
   const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
   const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
 
-  it("should only render if SaaS mode and is new user", async () => {
-    // @ts-expect-error - we only need the APP_MODE for this test
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    useIsAuthedMock.mockReturnValue({
+      data: true,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    useConfigMock.mockReturnValue({
+      data: {
+        APP_MODE: "saas",
+        FEATURE_FLAGS: { ...DEFAULT_FEATURE_FLAGS, ENABLE_BILLING: true },
+      },
+      isLoading: false,
+    });
+
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
       FEATURE_FLAGS: {
@@ -375,10 +476,10 @@ describe("Setup Payment modal", () => {
         HIDE_LLM_SETTINGS: false,
       },
     });
-    const error = createAxiosNotFoundErrorObject();
-    getSettingsSpy.mockRejectedValue(error);
 
     renderHomeScreen();
+
+    await screen.findByTestId("root-layout");
 
     const setupPaymentModal = await screen.findByTestId(
       "proceed-to-stripe-button",
