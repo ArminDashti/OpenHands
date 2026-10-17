@@ -51,6 +51,10 @@ pytest = "*"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
+# This file uses both the modern PEP 621 format ([project]) and the Poetry-specific format ([tool.poetry])
+# for backward compatibility. The warnings from `poetry check` about duplicate fields are expected and can be ignored.
+# The [project] section is the primary configuration, and the [tool.poetry] section is kept for compatibility.
+
 requires = [
   "poetry-core",
 ]
