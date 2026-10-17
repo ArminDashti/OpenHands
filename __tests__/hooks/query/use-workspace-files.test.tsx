@@ -151,7 +151,6 @@ describe("useWorkspaceFiles — local backend", () => {
     );
     expect(executeCommandSpy).toHaveBeenCalledTimes(1);
   });
-});
 
 describe("useWorkspaceFiles — cloud backend", () => {
   beforeEach(() => {
@@ -198,7 +197,7 @@ describe("useWorkspaceFiles — cloud backend", () => {
     });
 
     await waitFor(() =>
-      expect(result.current.data).toEqual(["hello.txt", "src/index.ts"]),
+      expect(result.current.data).toEqual(["foo.txt", "bar/baz.txt"]),
     );
   });
 
