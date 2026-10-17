@@ -433,7 +433,7 @@ test.describe("mock-LLM automation lifecycle", () => {
       `&& printf 'AUTOMATION_DISPATCHED\\n'`,
     ].join(" ");
 
-    // ⚠️  Padding response (index 0):
+    // ⚠️  Padding responses (indices 0-1):
     // Public skills are bundled from @openhands/extensions at build time.
     // The agent-server's skill-activation pipeline makes one internal LLM
     // call to decide which skills to inject before the agent loop starts.
@@ -461,25 +461,26 @@ test.describe("mock-LLM automation lifecycle", () => {
     // pinpointing the exact count.
 
     await registerTrajectory(request, "automation-lifecycle", [
-      // ── Main conversation (responses 0-3) ──
-      { text: "" }, // 0: consumed by skill-activation LLM call (see above)
+      // ── Main conversation ──
+      { text: "" }, // padding: consumed by the internal skill-activation call
+      { text: "" }, // padding: covers the agent loop when it wins the race
       {
-        // 1: create the automation via curl
+        // create the automation via curl
         tool_call: {
           name: "terminal",
           arguments: { command: createCmd },
         },
       },
       {
-        // 2: dispatch a run via curl
+        // dispatch a run via curl
         tool_call: {
           name: "terminal",
           arguments: { command: dispatchCmd },
         },
       },
-      { text: AUTOMATION_REPLY_TOKEN }, // 3: finish main conversation
+      { text: AUTOMATION_REPLY_TOKEN }, // finish main conversation
 
-      // ── Automation run's conversation (responses 4+) ──
+      // ── Automation run's conversation ──
       // The run starts a fresh conversation with the automation prompt.
       // Script one internal padding call +the required `finish` tool turn,
       // followed by a final text reply (+ one trailing safety blank** so the
