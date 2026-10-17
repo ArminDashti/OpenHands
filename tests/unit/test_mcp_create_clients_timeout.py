@@ -46,7 +46,7 @@ async def test_create_mcp_clients_with_unreachable_host():
     """Test that create_mcp_clients handles unreachable hosts properly."""
     # Use a URL with a valid format but pointing to a non-routable IP address
     # This IP is in the TEST-NET-1 range (192.0.2.0/24) reserved for documentation and examples
-    unreachable_url = 'http://192.0.2.1:8080'
+    unreachable_server = MCPSSEServerConfig(url='http://192.0.2.1:8080')
 
     # Temporarily modify the default timeout for the MCPClient.connect_sse method
     original_connect_sse = MCPClient.connect_sse
