@@ -13,15 +13,8 @@ One useful feature here is the ability to connect to your local filesystem. To m
 
     ```bash
     export WORKSPACE_BASE=/path/to/your/code
-
-    # Linux and Mac Example
-    # export WORKSPACE_BASE=$HOME/OpenHands
-    # Will set $WORKSPACE_BASE to /home/<username>/OpenHands
-    #
-    # WSL on Windows Example
-    # export WORKSPACE_BASE=/mnt/c/dev/OpenHands
-    # Will set $WORKSPACE_BASE to C:\dev\OpenHands
     ```
+
 2. Add the following options to the `docker run` command:
 
     ```bash
