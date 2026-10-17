@@ -3,9 +3,11 @@ import { useLocation } from "react-router";
 import { useIsAuthed } from "./query/use-is-authed";
 import { LoginMethod, setLoginMethod } from "#/utils/local-storage";
 import { useConfig } from "./query/use-config";
+import { useSettings } from "./query/use-settings";
 
 /**
  * Hook to handle authentication callback and set login method after successful authentication
+ * Only stores the login method if stay_logged_in setting is enabled
  */
 export const useAuthCallback = () => {
   const location = useLocation();
