@@ -71,6 +71,16 @@ _logger = logging.getLogger(__name__)
 GIT_TOKEN = 'GIT_TOKEN'
 
 
+# --- ACP session-resume persistence (issue #14260, Solution B) -------------
+#
+# The ACP server's session storage (`~/.claude/projects`, `~/.codex/sessions`)
+# must survive a sandbox recycle for `session/load` resume to work. The SDK
+# relocates each provider's data dir onto the durable, per-conversation
+# `<persistence_dir>/acp/<provider>` tree (under `/workspace`) when
+# `ACPAgent.acp_isolate_data_dir` is set (software-agent-sdk #1019); the builder
+# flips that flag on rather than hand-injecting CLAUDE_CONFIG_DIR/CODEX_HOME.
+
+
 @dataclass
 class LiveStatusAppConversationService(GitAppConversationService):
     """AppConversationService which combines live status info from the sandbox with stored data."""
