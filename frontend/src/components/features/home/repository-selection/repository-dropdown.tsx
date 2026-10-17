@@ -29,7 +29,7 @@ export function RepositoryDropdown({
     <SettingsDropdownInput
       testId="repo-dropdown"
       name="repo-dropdown"
-      placeholder={t(I18nKey.REPOSITORY$SELECT_REPO)}
+      placeholder={isDisabled ? t("Please select a provider first") : t(I18nKey.REPOSITORY$SELECT_REPO)}
       items={items}
       wrapperClassName={cn("max-w-[500px]", wrapperClassName)}
       onSelectionChange={onSelectionChange}

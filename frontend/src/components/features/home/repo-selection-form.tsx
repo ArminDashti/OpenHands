@@ -93,6 +93,14 @@ export function RepositorySelectionForm({
     label: repo.full_name,
   }));
 
+  // Create provider dropdown items
+  const providerItems = React.useMemo(() => {
+    return providers.map(provider => ({
+      key: provider,
+      label: provider.charAt(0).toUpperCase() + provider.slice(1), // Capitalize first letter
+    }));
+  }, [providers]);
+
   const handleRepoSelection = (key: React.Key | null) => {
     const selectedRepo = repositoriesList?.find(
       (repo) => repo.id.toString() === key,
@@ -109,6 +117,26 @@ export function RepositorySelectionForm({
     }
   };
 
+  // Render the provider dropdown
+  const renderProviderSelector = () => {
+    // Only render if there are multiple providers
+    if (providers.length <= 1) {
+      return null;
+    }
+
+    return (
+      <SettingsDropdownInput
+        testId="provider-dropdown"
+        name="provider-dropdown"
+        placeholder="Select Provider"
+        items={providerItems}
+        wrapperClassName="max-w-[500px]"
+        onSelectionChange={handleProviderSelection}
+        selectedKey={selectedProvider || undefined}
+      />
+    );
+  };
+
   // Render the appropriate UI based on the loading/error state
   const renderRepositorySelector = () => {
     if (isLoadingRepositories) {
@@ -118,6 +146,9 @@ export function RepositorySelectionForm({
     if (isRepositoriesError) {
       return <RepositoryErrorState />;
     }
+
+    // For now, don't disable the repo dropdown based on provider selection
+    const isDisabled = false;
 
     return (
       <RepositoryDropdown
