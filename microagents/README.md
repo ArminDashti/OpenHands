@@ -4,7 +4,7 @@ MicroAgents are specialized prompts that enhance OpenHands with domain-specific 
 
 ## Sources of Microagents
 
-OpenHands loads microagents from two sources:
+OpenHands loads microagents from three sources:
 
 ### 1. Shareable Microagents (Public)
 This directory (`OpenHands/microagents/`) contains shareable microagents that are:
@@ -25,7 +25,25 @@ OpenHands/microagents/
     └── feature.md     # Feature implementation
 ```
 
-### 2. Repository Instructions (Private)
+### 2. User Global Microagents
+The `~/.openhands/microagents/` directory contains user-specific global microagents that are:
+- Available across all repositories on your machine
+- Maintained by you locally
+- Perfect for personal preferences and workflows that apply to all your projects
+
+Directory structure:
+```
+~/.openhands/microagents/
+├── # Your personal knowledge microagents
+│   ├── my-python-style.md    # Personal Python style preferences
+│   ├── my-git-workflow.md    # Your preferred Git workflow
+│   └── ...
+└── # Your global repo microagents
+    ├── global-guidelines.md  # Guidelines for all your repos
+    └── ...
+```
+
+### 3. Repository Instructions (Private)
 Each repository can have its own instructions in `.openhands/microagents/repo.md`. These instructions are:
 - Private to that repository
 - Automatically loaded when working with that repository
