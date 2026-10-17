@@ -177,7 +177,7 @@ export function ActivityLogItem({ run, automation }: ActivityLogItemProps) {
           {content}
         </a>
       ) : (
-        <div className="flex items-center justify-between px-5 py-3 cursor-default">
+        <div className="flex items-center justify-between gap-4 px-5 py-3 cursor-default">
           {content}
         </div>
       )}
