@@ -8,7 +8,6 @@ import {
 } from "#/utils/git-control-bar-classes";
 import { I18nKey } from "#/i18n/declaration";
 import { Provider } from "#/types/settings";
-import { useTracking } from "#/hooks/use-tracking";
 
 interface GitControlBarPushButtonProps {
   onSuggestionsClick: (value: string) => void;
@@ -32,7 +31,6 @@ export function GitControlBarPushButton({
     providerTokensReady && hasRepository && isConversationReady;
 
   const handlePushClick = () => {
-    trackPushButtonClick();
     onSuggestionsClick(getGitPushPrompt(currentGitProvider));
   };
 
