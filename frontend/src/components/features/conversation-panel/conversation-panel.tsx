@@ -1,12 +1,12 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConversationCard } from "./conversation-card";
-import { useUserConversations } from "#/hooks/query/use-user-conversations";
-import { useDeleteConversation } from "#/hooks/mutation/use-delete-conversation";
+import { useUserConversations } from "#/hooks/use-user-conversations";
+import { useDeleteConversation } from "#/hooks/use-delete-conversation";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 import { NewConversationButton } from "./new-conversation-button";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
-import { useUpdateConversation } from "#/hooks/mutation/use-update-conversation";
+import { useUpdateConversation } from "#/hooks/use-update-conversation";
 import { useEndSession } from "#/hooks/use-end-session";
 import { ExitConversationModal } from "./exit-conversation-modal";
 
@@ -31,10 +31,14 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
     string | null
   >(null);
 
-  const { data: conversations, isFetching, error } = useUserConversations();
+  const {
+    data: conversations,
+    isLoading: isFetching,
+    error,
+  } = useUserConversations();
 
-  const { mutate: deleteConversation } = useDeleteConversation();
-  const { mutate: updateConversation } = useUpdateConversation();
+  const [deleteConversation] = useDeleteConversation();
+  const [updateConversation] = useUpdateConversation();
 
   const handleDeleteProject = (conversationId: string) => {
     setConfirmDeleteModalVisible(true);

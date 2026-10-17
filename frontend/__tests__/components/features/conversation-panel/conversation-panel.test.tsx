@@ -1,10 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  QueryClientProvider,
-  QueryClient,
-  QueryClientConfig,
-} from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { ConversationPanel } from "#/components/features/conversation-panel/conversation-panel";
 import OpenHands from "#/api/open-hands";
@@ -72,10 +67,13 @@ describe.skip("ConversationPanel", () => {
   });
 
   it("should handle an error when fetching conversations", async () => {
-    const getUserConversationsSpy = vi.spyOn(OpenHands, "getUserConversations");
-    getUserConversationsSpy.mockRejectedValue(
-      new Error("Failed to fetch conversations"),
-    );
+    vi.spyOn(authApiSlice, 'useGetUserConversationsQuery').mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { message: "Failed to fetch conversations" },
+      refetch: vi.fn(),
+    });
 
     renderConversationPanel({
       defaultOptions: {
@@ -133,6 +131,7 @@ describe.skip("ConversationPanel", () => {
     await user.click(confirmButton);
 
     expect(screen.queryByText("Confirm")).not.toBeInTheDocument();
+    expect(deleteMock).toHaveBeenCalledWith("2");
 
     // Ensure the conversation is deleted
     cards = await screen.findAllByTestId("conversation-card");
@@ -158,6 +157,7 @@ describe.skip("ConversationPanel", () => {
     await user.click(confirmButton);
 
     expect(screen.queryByText("Confirm")).not.toBeInTheDocument();
+    expect(deleteMock).toHaveBeenCalledWith("1");
 
     // Ensure the conversation is deleted
     cards = await screen.findAllByTestId("conversation-card");
@@ -201,18 +201,18 @@ describe.skip("ConversationPanel", () => {
     await user.tab();
 
     // Ensure the conversation is not renamed
-    expect(updateUserConversationSpy).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
 
     await user.type(title, "Conversation 1");
     await user.click(title);
     await user.tab();
 
-    expect(updateUserConversationSpy).toHaveBeenCalledTimes(1);
+    expect(updateMock).toHaveBeenCalledTimes(1);
 
     await user.click(title);
     await user.tab();
 
-    expect(updateUserConversationSpy).toHaveBeenCalledTimes(1);
+    expect(updateMock).toHaveBeenCalledTimes(1);
   });
 
   it("should call onClose after clicking a card", async () => {
