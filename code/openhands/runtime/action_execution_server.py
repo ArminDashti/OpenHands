@@ -46,6 +46,7 @@ from openhands.events.action import (
 )
 from openhands.events.event import FileEditSource, FileReadSource
 from openhands.events.observation import (
+    CmdOutputMetadata,
     CmdOutputObservation,
     ErrorObservation,
     FileEditObservation,
