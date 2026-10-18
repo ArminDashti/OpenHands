@@ -1,8 +1,14 @@
 ---
 name: frontend-development
-description: This skill should be used when the user asks to "add UI copy", "add a translation", "optimize the frontend bundle", "change onboarding", "change conversation UI", "add a query key", "change MSW mocks", or modifies React components, hooks, routes, i18n, lazy loading, persisted UI state, or shared frontend behavior.
+description: >-
+  This skill should be used when the user asks to "add UI copy", "add a translation", "optimize the frontend bundle", "change onboarding", "change conversation UI", "add a query key", "change MSW mocks", or modifies React components, hooks, routes, i18n, lazy loading, persisted UI state, or shared frontend behavior.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 37990439-c85b-4ba9-9d53-cd415a25a950
 ---
-
 # Frontend Development
 
 Apply Canvas-specific React, TypeScript, internationalization, state ownership, mock-mode, and bundle-performance conventions.

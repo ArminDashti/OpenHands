@@ -1,8 +1,14 @@
 ---
 name: telemetry-analytics
-description: This skill should be used when the user asks to "add tracking", "add a PostHog event", "change telemetry consent", "instrument onboarding", "debug analytics", or changes telemetry.ts, use-tracking.ts, cloud funnel analytics, or analytics environment variables.
+description: >-
+  This skill should be used when the user asks to "add tracking", "add a PostHog event", "change telemetry consent", "instrument onboarding", "debug analytics", or changes telemetry.ts, use-tracking.ts, cloud funnel analytics, or analytics environment variables.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 865181c6-3712-401a-9a45-5d0cd0c3940c
 ---
-
 # Telemetry and Analytics
 
 Preserve Canvas's single-client telemetry architecture, consent ownership, identity lifecycle, and canonical event contracts.

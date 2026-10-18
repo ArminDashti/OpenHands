@@ -1,8 +1,14 @@
 ---
 name: desktop-electron
-description: This skill should be used when the user asks to "change the desktop app", "package Electron", "build a universal macOS app", "bundle Node or uv", "fix Electron startup", or changes electron/, electron-builder.config.mjs, desktop workflows, bundled runtimes, or desktop process startup.
+description: >-
+  This skill should be used when the user asks to "change the desktop app", "package Electron", "build a universal macOS app", "bundle Node or uv", "fix Electron startup", or changes electron/, electron-builder.config.mjs, desktop workflows, bundled runtimes, or desktop process startup.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 5349a7a8-877f-4da9-b97b-30b479b93ed8
 ---
-
 # Electron Desktop
 
 Preserve desktop startup reliability and packaging invariants across development, installed single-architecture builds, and universal macOS builds.

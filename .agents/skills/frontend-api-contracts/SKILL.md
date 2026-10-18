@@ -1,8 +1,14 @@
 ---
 name: frontend-api-contracts
-description: This skill should be used when the user asks to "add an API call", "change a backend", "update settings persistence", "change conversation events", "fix backend auth", "add Agent Server support", or changes src/api, backend registry, Cloud/runtime transport, settings, secrets, compatibility, or conversation resume behavior.
+description: >-
+  This skill should be used when the user asks to "add an API call", "change a backend", "update settings persistence", "change conversation events", "fix backend auth", "add Agent Server support", or changes src/api, backend registry, Cloud/runtime transport, settings, secrets, compatibility, or conversation resume behavior.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 5fdb17b8-cbaf-4211-b3ac-3ca856c087dc
 ---
-
 # Frontend API and Backend Contracts
 
 Keep Canvas as a typed consumer of Agent Server and Cloud contracts. Preserve repository ownership, compatibility floors, transport boundaries, authentication modes, and durable state invariants.

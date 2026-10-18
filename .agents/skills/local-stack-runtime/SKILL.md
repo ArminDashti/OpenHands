@@ -1,8 +1,14 @@
 ---
 name: local-stack-runtime
-description: This skill should be used when the user asks to "change the dev stack", "add a runtime service", "change the launcher", "update Docker", "bump Agent Server", "change ingress routing", or changes scripts/dev-*.mjs, runtime-services metadata, config/defaults.json, Docker, automation startup, process shutdown, or local authentication.
+description: >-
+  This skill should be used when the user asks to "change the dev stack", "add a runtime service", "change the launcher", "update Docker", "bump Agent Server", "change ingress routing", or changes scripts/dev-*.mjs, runtime-services metadata, config/defaults.json, Docker, automation startup, process shutdown, or local authentication.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 9c03db18-4d65-4048-ac79-d781e78dde5d
 ---
-
 # Local Stack and Runtime Services
 
 Maintain the shared configuration and launch plumbing across Vite/static development, Agent Server, automation, ingress, the published binary, and the all-in-one Docker image.

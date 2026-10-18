@@ -1,8 +1,14 @@
 ---
 name: e2e-testing
-description: This skill should be used when the user asks to "add an E2E test", "run live E2E", "run mock-LLM tests", "debug Playwright CI", "test the Docker image", or changes tests/e2e, Playwright configs, E2E workflows, artifacts, or test reporting.
+description: >-
+  This skill should be used when the user asks to "add an E2E test", "run live E2E", "run mock-LLM tests", "debug Playwright CI", "test the Docker image", or changes tests/e2e, Playwright configs, E2E workflows, artifacts, or test reporting.
+metadata:
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: []
+  last_updated: "2026-10-17 18:54:41"
+  uuid: d528bfbf-4fe3-42e2-8ed6-91fd6c1b4f3d
 ---
-
 # End-to-End Testing
 
 Use the correct test layer and preserve the security and production-fidelity boundaries between ordinary browser tests, mock-LLM suites, Docker image tests, and live LLM-backed QA.

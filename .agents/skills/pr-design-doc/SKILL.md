@@ -1,21 +1,14 @@
 ---
 name: pr-design-doc
-description: >
-  For a non-trivial pull request, write a self-contained HTML design doc under the
-  temporary `.pr/` directory and link a visibility-appropriate preview in the PR
-  description, so maintainers grasp the proposal at a glance - code/API design, and the
-  before/after of the change, grounded to real code. Use when opening or updating a
-  non-trivial PR, or when the user says "add a design doc", "document this PR for
-  reviewers", "show the before/after", "make the design reviewable", or "write the .pr/
-  page".
-triggers:
-- /pr-design-doc
-- /design-doc
-license: MIT
+description: >-
+  For a non-trivial pull request, write a self-contained HTML design doc under the temporary `.pr/` directory and link a visibility-appropriate preview in the PR description, so maintainers grasp the proposal at a glance - code/API design, and the before/after of the change, grounded to real code. Use when opening or updating a non-trivial PR, or when the user says "add a design doc", "document this PR for reviewers", "show the before/after", "make the design reviewable", or "write the .pr/ page".
 metadata:
-  tags: pull-request, design-doc, html, review, before-after, htmlpreview
+  version: 1.0.0
+  author: "Armin Dashti"
+  tags: [pull-request, design-doc, html, review, before-after, htmlpreview]
+  last_updated: "2026-10-17 18:54:41"
+  uuid: 2da0eea5-fa66-41f0-96c2-73e67638fee7
 ---
-
 # pr-design-doc - a reviewable design doc for a non-trivial PR
 
 A diff shows *what changed line by line*. It does not show *the design*: the shape of the
